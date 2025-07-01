@@ -1,0 +1,15 @@
+[package]
+name = "blitz"
+version = "0.1.0"
+edition = "2021"
+authors = ["Risuleia"]
+description = "A minimal WebSocket + HTTP server implementation in Rust"
+license = "MIT"
+repository = "https://github.com/Risuleia/blitz"
+readme = "README.md"
+keywords = ["websocket", "http", "server"]
+categories = ["network-programming", "web-programming::websocket"]
+
+[dependencies]
+base64 = "0.22.1"
+sha1 = "0.10.6"
