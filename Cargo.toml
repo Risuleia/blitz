@@ -16,11 +16,15 @@ path = "src/lib.rs"
 
 [dependencies]
 base64 = "0.22.1"
+bytes = "1.10.1"
 flate2 = { version = "1.1.2", features = ["rust_backend"] }
 rand = "0.9.1"
 sha1 = "0.10.6"
+thiserror = "2.0.12"
 
 [features]
 default = ["http", "websocket"]
 http = []
 websocket = []
+native-tls = []
+rustls = []
