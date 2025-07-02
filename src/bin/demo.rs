@@ -1,10 +1,7 @@
 use std::{io::{self, Read, Write}, net::{TcpListener, TcpStream}, thread};
 
-use crate::{http::request::HttpRequest, websocket::{connection::WebSocketConnection, protocol::try_websocket_upgrade}};
-
-pub mod http;
-pub mod websocket;
-mod utils;
+use blitz::http::request::HttpRequest;
+use blitz::protocol::{websocket::WebSocketConnection, protocol::try_websocket_upgrade};
 
 fn main() -> io::Result<()> {
     let listener = TcpListener::bind("0.0.0.0:8080")

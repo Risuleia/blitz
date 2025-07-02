@@ -10,6 +10,17 @@ readme = "README.md"
 keywords = ["websocket", "http", "server"]
 categories = ["network-programming", "web-programming::websocket"]
 
+[lib]
+name = "blitz"
+path = "src/lib.rs"
+
 [dependencies]
 base64 = "0.22.1"
+flate2 = { version = "1.1.2", features = ["rust_backend"] }
+rand = "0.9.1"
 sha1 = "0.10.6"
+
+[features]
+default = ["http", "websocket"]
+http = []
+websocket = []
