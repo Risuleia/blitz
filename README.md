@@ -61,15 +61,15 @@ otherwise you won't be able to communicate with the TLS endpoints.
 
 Design Goals
 ------------
-Zero async: Fully synchronous, blocking API
-Explicit handshake logic and frame state machine
-No hidden abstractions, futures, or macros
-Easy to audit, debug, and extend
+- Zero async: Fully synchronous, blocking API
+- Explicit handshake logic and frame state machine
+- No hidden abstractions, futures, or macros
+- Easy to audit, debug, and extend
 
 Example Projects
 ---------------
-[examples/echo.rs](./examples.echo.rs): Simple WebSocket echo server
-[examples/client.rs](./examples/client.rs): Basic WebSocket client using TcpStream
+[examples/echo.rs](./examples.echo.rs): Simple WebSocket echo server <br/>
+[examples/client.rs](./examples/client.rs): Basic WebSocket client using TcpStream <br/>
 [examples/tls.rs](./examples/tls.rs): Connecting via TLS with native-tls or rustls
 
 Compression Support
@@ -82,12 +82,6 @@ Testing
 - Internal unit tests cover most framing and handshake logic.
 - Autobahn Test Suite compatibility is being targeted (WIP).
 - CI planned for protocol compliance and memory safety.
-
-Benchmark
----------
-Benches are in [./benches](./benches/).
-* Run all with `cargo bench --bench \* -- --quick --noplot`
-* Run a particular set with, say "e2e", with `cargo bench --bench e2e -- --quick --noplot`
 
 Contributing
 ------------

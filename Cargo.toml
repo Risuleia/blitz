@@ -9,12 +9,13 @@ repository = "https://github.com/Risuleia/blitz"
 readme = "README.md"
 keywords = ["websocket", "http", "server"]
 categories = ["network-programming", "web-programming::websocket"]
+include = ["src/**/*", "examples/**/*", "LICENSE-*", "README.md", "CHANGELOG.md"]
 
 [package.metadata.docs.rs]
 all-features = true
 
 [features]
-default = ["handshake", "url", "native-tls", "native-tls-vendored", "rustls-tls-native-roots", "rustls-tls-webpki-roots", "__rustls-tls"]
+default = ["handshake"]
 handshake = ["http", "httparse", "sha1"]
 url = ["dep:url"]
 native-tls = ["native-tls-crate"]

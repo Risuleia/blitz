@@ -21,6 +21,21 @@ impl Message {
         matches!(self, Message::Ping(_) | Message::Pong(_) | Message::Close(_))
     }
 
+    /// Indicates if the Message is of data protocol (`Text`, `Binary`)
+    pub fn is_data(&self) -> bool {
+        matches!(self, Message::Text(_) | Message::Binary(_))
+    }
+
+    /// Indicates if the Message is of `Text` protocol
+    pub fn is_text(&self) -> bool {
+        matches!(self, Message::Text(_))
+    }
+
+    /// Indicates if the Message is of `Binary` protocol
+    pub fn is_binary(&self) -> bool {
+        matches!(self, Message::Binary(_))
+    }
+
     /// Parses the message data
     pub fn into_data(self) -> Vec<u8> {
         match self {
