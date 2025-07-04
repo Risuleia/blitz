@@ -1,3 +1,5 @@
+//! Protocol module
+
 pub mod websocket;
 pub mod frame;
 pub mod message;

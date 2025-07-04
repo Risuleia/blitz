@@ -1,17 +1,27 @@
+//! WebSocket Message handler
+
+/// A WebSocket message
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Message {
+    /// A text message
     Text(String),
+    /// A binary message
     Binary(Vec<u8>),
+    /// A ping (control) message
     Ping(Vec<u8>),
+    /// A pong (control) message
     Pong(Vec<u8>),
+    /// A close (control) message
     Close(Option<(u16, String)>)
 }
 
 impl Message {
+    /// Indicates if the Message is of control protocol (`Ping`, `Pong`, `Close`)
     pub fn is_control(&self) -> bool {
         matches!(self, Message::Ping(_) | Message::Pong(_) | Message::Close(_))
     }
 
+    /// Parses the message data
     pub fn into_data(self) -> Vec<u8> {
         match self {
             Self::Text(s) => s.into_bytes(),
@@ -28,6 +38,7 @@ impl Message {
         }
     }
 
+    /// Parses a close message
     pub fn from_close_payload(payload: Vec<u8>) -> Self {
         if payload.len() >= 2 {
             let code = u16::from_be_bytes([payload[0], payload[1]]);

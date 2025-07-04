@@ -1,16 +1,26 @@
+//! WebSocket Frame module
+
 use std::io::{self, Read, Write};
 
 use crate::{protocol::compression, MAX_ALLOWED_LEN};
 
+/// WebSocket message opcode as in RFC 6455.
 #[repr(u8)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum OpCode {
+    /// A continuation frame
     Continuation = 0x0,
+    /// A text frame
     Text = 0x1,
+    /// A binary frame
     Binary = 0x2,
+    /// A close frame
     Close = 0x8,
+    /// A ping frame
     Ping = 0x9,
+    /// A pong frame
     Pong = 0xA,
+    /// Edge cases
     Bad = 0xFF
 }
 
@@ -28,14 +38,21 @@ impl From<u8> for OpCode {
     }
 }
 
+/// The WebSocket Frame
 #[derive(Debug)]
 pub struct Frame {
+    /// Indicates is the frame is the last one of a possibly fragmented message
     pub fin: bool,
+    /// WebSocket protocol opcode
     pub opcode: OpCode,
+    /// Whether the frame is masked or not
     pub masked: bool,
-    pub payload: Vec<u8>,
+    /// A frame mask (if any)
     pub masking_key: Option<[u8; 4]>,
-    pub rsv1: bool
+    /// Rserved for protocol extensions
+    pub rsv1: bool,
+    /// The frame data
+    pub payload: Vec<u8>
 }
 
 impl Frame {
@@ -45,6 +62,7 @@ impl Frame {
         }
     }
 
+    /// Initializes a new frame
     pub fn new(
         opcode: OpCode,
         fin: bool,
@@ -61,6 +79,7 @@ impl Frame {
         Frame { fin, rsv1, opcode, payload, masked, masking_key }
     }
 
+    /// Reads a frame
     pub fn read<R: Read>(reader: &mut R, compression: bool) -> io::Result<Self> {
         let mut header = [0u8; 2];
         reader.read_exact(&mut header)?;
@@ -119,6 +138,7 @@ impl Frame {
         })
     }
 
+    /// Writes a frame
     pub fn write<W: Write>(&self, writer: &mut W, compression: bool) -> io::Result<()> {
         let mut first_byte = 0u8;
         let mut rsv1 = self.rsv1;
@@ -153,7 +173,7 @@ impl Frame {
 
             let mut masked_payload = payload.clone();
             Self::apply_mask(&mut masked_payload, key);
-            writer.write_all(&masked_payload);
+            writer.write_all(&masked_payload)?;
         } else {
             writer.write_all(&payload)?;
         }

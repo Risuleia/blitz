@@ -1,25 +1,40 @@
+//! WebSocket handler
+
 use std::io::{self, Read, Write};
 
-use crate::protocol::{config::WebSocketConfig, frame::{Frame, OpCode}, message::Message};
+use crate::{protocol::{config::WebSocketConfig, frame::{Frame, OpCode}, message::Message}, MAX_CONTINUATION_FRAMES, MAX_CONTROL_FRAME_PAYLOAD};
 
-pub enum Mode {
+/// WebSocket operation mode
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum OperationMode {
+    /// Client mode
     Client,
+    /// Server mode
     Server
 }
 
+/// WebSocket input-output stream.
+///
+/// This is THE structure you want to create to be able to speak the WebSocket protocol.
+/// It may be created by calling `connect`, `accept` or `client` functions.
+///
+/// Use [`WebSocket::read`], [`WebSocket::send`] to received and send messages.
+#[derive(Debug)]
 pub struct WebSocket<T> {
     stream: T,
     read_buffer: Vec<u8>,
-    mode: Mode,
+    mode: OperationMode,
     config: WebSocketConfig
 }
 
 impl<T: Read + Write> WebSocket<T> {
-    pub fn new(stream: T, mode: Mode) -> Self {
+    /// Initializes a new WebSocket stream
+    pub fn new(stream: T, mode: OperationMode) -> Self {
         Self::with_config(stream, mode, WebSocketConfig::default())
     }
 
-    pub fn with_config(stream: T, mode: Mode, config: WebSocketConfig) -> Self {
+    /// Initializes a new WebSocket stream with configuration options
+    pub fn with_config(stream: T, mode: OperationMode, config: WebSocketConfig) -> Self {
         WebSocket {
             stream,
             read_buffer: Vec::with_capacity(4096),
@@ -28,16 +43,17 @@ impl<T: Read + Write> WebSocket<T> {
         }
     }
 
+    /// Reads an incoming message in the stream
     pub fn read_message(&mut self) -> io::Result<Message> {
         let frame = Frame::read(&mut self.stream, self.config.compression.enabled)?;
 
         match self.mode {
-            Mode::Server => {
+            OperationMode::Server => {
                 if !frame.masked {
                     return Err(io::Error::new(io::ErrorKind::InvalidData, "Clients must mask frames"))
                 }
             },
-            Mode::Client => {
+            OperationMode::Client => {
                 if frame.masked {
                     return Err(io::Error::new(io::ErrorKind::InvalidData, "Servers must not mask frames"))
                 }
@@ -49,7 +65,7 @@ impl<T: Read + Write> WebSocket<T> {
                 return Err(io::Error::new(io::ErrorKind::InvalidData, "Control frame must not be fragmented"))
             }
 
-            if frame.payload.len() > self.config.max_control_frame_payload {
+            if frame.payload.len() > MAX_CONTROL_FRAME_PAYLOAD {
                 return Err(io::Error::new(io::ErrorKind::InvalidData, "Control frame payload too large"))
             }
         }
@@ -62,7 +78,7 @@ impl<T: Read + Write> WebSocket<T> {
                 let mut continuation_count = 0;
 
                 loop {
-                    if continuation_count > self.config.max_continuation_frames {
+                    if continuation_count > MAX_CONTINUATION_FRAMES {
                         return Err(io::Error::new(io::ErrorKind::InvalidData, "Too many continuation frames"))
                     }
 
@@ -72,8 +88,10 @@ impl<T: Read + Write> WebSocket<T> {
                     }
 
                     payload.extend(cont.payload);
-                    if payload.len() > self.config.max_message_size {
-                        return Err(io::Error::new(io::ErrorKind::InvalidData, "Message too large"))
+                    if self.config.max_message_size.is_some() {
+                        if payload.len() > self.config.max_message_size.unwrap() {
+                            return Err(io::Error::new(io::ErrorKind::InvalidData, "Message too large"))
+                        }
                     }
 
                     continuation_count += 1;
@@ -109,6 +127,7 @@ impl<T: Read + Write> WebSocket<T> {
         }
     }
 
+    /// Writes an outgoing message from the stream
     pub fn write_message(&mut self, msg: Message) -> io::Result<()> {
         let frame = match msg {
             Message::Text(s) => Frame::new(OpCode::Text, false, self.config.compression.enabled, false, s.into_bytes()),
@@ -128,10 +147,12 @@ impl<T: Read + Write> WebSocket<T> {
         frame.write(&mut self.stream, self.config.compression.enabled)
     }
 
+    /// Returns a mutable reference to the stream
     pub fn get_mut(&mut self) -> &mut T {
         &mut self.stream
     }
 
+    /// Returns the inner instance of the stream
     pub fn into_inner(self) -> T {
         self.stream
     }

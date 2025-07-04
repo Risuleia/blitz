@@ -1,10 +1,14 @@
+//! Compressing module
+
+#[allow(missing_docs)]
 use std::io::{self, Read};
 
 use flate2::{bufread::{DeflateDecoder, DeflateEncoder}, Compression};
 
 const PERMESSAFE_DEFLATE_TRAILER: &[u8] = &[0x00, 0x00, 0xff, 0xff];
 
-#[derive(Debug, Clone)]
+#[allow(missing_docs)]
+#[derive(Debug, Clone, Copy)]
 pub struct WebSocketCompressionConfig {
     pub enabled: bool,
     pub client_no_context_takeover: bool,
@@ -25,11 +29,13 @@ impl Default for WebSocketCompressionConfig {
     }
 }
 
-#[derive(Debug)]
+#[allow(missing_docs)]
+#[derive(Debug, Clone, Copy)]
 pub struct Compressor {
     no_context_takeover: bool
 }
 
+#[allow(missing_docs)]
 impl Compressor {
     pub fn new(no_context_takeover: bool) -> Self {
         Self { no_context_takeover }
@@ -44,11 +50,13 @@ impl Compressor {
     }
 }
 
-#[derive(Debug)]
+#[allow(missing_docs)]
+#[derive(Debug, Copy, Clone)]
 pub struct Decompressor {
     no_context_takeover: bool
 }
 
+#[allow(missing_docs)]
 impl Decompressor {
     pub fn new(no_context_takeover: bool) -> Self {
         Self { no_context_takeover }
@@ -66,6 +74,7 @@ impl Decompressor {
     }
 }
 
+#[doc(hidden)]
 pub fn compress(data: &[u8]) -> io::Result<Vec<u8>> {
     let mut encoder = DeflateEncoder::new(data, Compression::default());
     let mut compressed = Vec::new();
@@ -75,6 +84,7 @@ pub fn compress(data: &[u8]) -> io::Result<Vec<u8>> {
     Ok(compressed)
 }
 
+#[doc(hidden)]
 pub fn decompress(data: &[u8]) -> io::Result<Vec<u8>> {
     let stripped = if data.ends_with(PERMESSAFE_DEFLATE_TRAILER) {
         &data[..data.len() - PERMESSAFE_DEFLATE_TRAILER.len()]
