@@ -41,7 +41,7 @@ fn main() {
             loop {
                 let msg = ws.read().expect("Failed to read message");
                 if msg.is_data() {
-                    ws.write(msg).expect("Failed to write message");
+                    ws.send(msg).expect("Failed to write message");
                 }
             }
         });
