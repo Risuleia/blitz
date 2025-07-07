@@ -5,6 +5,8 @@ use std::{io, str::Utf8Error, string::FromUtf8Error};
 use http::{HeaderName, Response};
 use thiserror::Error;
 
+use crate::protocol::frame::codec::Data;
+
 
 /// Generic result type
 pub type Result<T, E = Error> = std::result::Result<T, E>;
@@ -225,7 +227,7 @@ pub enum ProtocolError {
 
     /// Received data while waiting for more fragments.
     #[error("Expected fragment of type {0:?} but received something else")]
-    ExpectedFragment(FragmentType),
+    ExpectedFragment(Data),
 
     /// Not allowed to send after having sent a closing frame.
     #[error("Sent after close handshake started")]
@@ -267,15 +269,6 @@ pub enum SubProtocolError {
     /// subprotocols
     #[error("Server sent no subprotocol")]
     NoSubProtocol,
-}
-
-/// Fragment type
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
-pub enum FragmentType {
-    /// Text fragment
-    Text,
-    /// Binary fragment
-    Binary
 }
 
 /// Indicates the specific type/cause of a capacity error.

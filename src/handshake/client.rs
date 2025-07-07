@@ -73,7 +73,7 @@ impl<S: Read + Write> HandshakeRole for ClientHandshake<S> {
                     Err(e) => return Err(e)
                 };
 
-                let websocket = WebSocket::with_config(stream, OperationMode::Client, self.config.take().unwrap_or(WebSocketConfig::default()));
+                let websocket = WebSocket::from_partially_read(stream, tail, OperationMode::Client, self.config);
                 ProcessingResult::Done((websocket, res))
             }
         })

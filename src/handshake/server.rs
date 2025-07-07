@@ -197,7 +197,7 @@ impl<S: Read + Write, C: Callback> HandshakeRole for ServerHandshake<S, C> {
         ) -> Result<ProcessingResult<Self::InternalStream, Self::FinalResult>> {
         match finish {
             StageResult::DoneReading { result, stream , tail } => {
-                if tail.is_empty() {
+                if !tail.is_empty() {
                     return Err(Error::Protocol(ProtocolError::JunkAfterRequest));
                 }
 
@@ -240,8 +240,7 @@ impl<S: Read + Write, C: Callback> HandshakeRole for ServerHandshake<S, C> {
                     return Err(Error::Http(HttpResponse::from_parts(parts, body.map(|s| s.into_bytes()))));
                 }
                 
-                let config = self.config.take().unwrap_or_default();
-                Ok(ProcessingResult::Done(WebSocket::with_config(stream, OperationMode::Server, config)))
+                Ok(ProcessingResult::Done(WebSocket::new(stream, OperationMode::Server, self.config)))
             }
         }
     }
