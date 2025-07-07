@@ -39,9 +39,9 @@ fn main() {
                 .expect("WebSocket handshake failed");
 
             loop {
-                let msg = ws.read_message().expect("Failed to read message");
+                let msg = ws.read().expect("Failed to read message");
                 if msg.is_data() {
-                    ws.write_message(msg).expect("Failed to write message");
+                    ws.write(msg).expect("Failed to write message");
                 }
             }
         });

@@ -10,9 +10,9 @@ fn main() {
         println!("* {header}");
     }
 
-    socket.write_message(Message::Text("Hello!".into())).unwrap();
+    socket.write(Message::Text("Hello!".into())).unwrap();
     loop {
-        let msg = socket.read_message().expect("Error reading message.");
+        let msg = socket.read().expect("Error reading message.");
         println!("Received: {msg}");
     }
 }
