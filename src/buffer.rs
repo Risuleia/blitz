@@ -77,3 +77,9 @@ impl<const CHUNK_SIZE: usize> Buf for ReadBuffer<CHUNK_SIZE> {
         self.storage.set_position(new_position);
     }
 }
+
+impl<const CHUNK_SIZE: usize> Default for ReadBuffer<CHUNK_SIZE> {
+    fn default() -> Self {
+        Self::new()
+    }
+}

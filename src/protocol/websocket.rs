@@ -36,7 +36,7 @@ impl<T: Read + Write> WebSocket<T> {
     /// Panics if config is invalid e.g. `max_write_buffer_size <= write_buffer_size`.
     pub fn new(stream: T, mode: OperationMode, config: Option<WebSocketConfig>) -> Self {
         WebSocket {
-            stream: stream,
+            stream,
             context: WebSocketContext::new(mode, config)
         }
     }
@@ -51,7 +51,7 @@ impl<T: Read + Write> WebSocket<T> {
     /// Panics if config is invalid e.g. `max_write_buffer_size <= write_buffer_size`.
     pub fn from_partially_read(stream: T, part: Vec<u8>, mode: OperationMode, config: Option<WebSocketConfig>) -> Self {
         WebSocket {
-            stream: stream,
+            stream,
             context: WebSocketContext::from_partially_read(part, mode, config)
         }
     }
@@ -396,8 +396,8 @@ impl WebSocketContext {
             match frame.header().opcode {
                 OpCode::Control(ctrl) => {
                     match ctrl {
-                        _ if !frame.header().fin => return Err(Error::Protocol(ProtocolError::FragmentedControlFrame)),
-                        _ if frame.payload().len() > MAX_CONTROL_FRAME_PAYLOAD => return Err(Error::Protocol(ProtocolError::ControlFrameTooBig)),
+                        _ if !frame.header().fin => Err(Error::Protocol(ProtocolError::FragmentedControlFrame)),
+                        _ if frame.payload().len() > MAX_CONTROL_FRAME_PAYLOAD => Err(Error::Protocol(ProtocolError::ControlFrameTooBig)),
                         Control::Close => Ok(self.try_close(frame.into_close()?).map(Message::Close)),
                         Control::Reserved(code) => Err(Error::Protocol(ProtocolError::UnknownControlOpCode(code))),
                         Control::Ping => {

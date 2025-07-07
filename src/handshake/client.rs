@@ -175,7 +175,7 @@ impl VerifyData {
         if !headers
             .get("Connection")
             .and_then(|h| h.to_str().ok())
-            .map(|v| v.split(|c| c == ',' || c == ' ').any(|s| s.eq_ignore_ascii_case("Upgrade")))
+            .map(|v| v.split([',', ' ']).any(|s| s.eq_ignore_ascii_case("Upgrade")))
             .unwrap_or(false)
         {
             return Err(Error::Protocol(ProtocolError::MissingConnectionUpgradeHeader));

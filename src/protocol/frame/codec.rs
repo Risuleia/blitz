@@ -104,6 +104,7 @@ impl From<u8> for OpCode {
 
 /// Status code used to indicate why an endpoint is closing the WebSocket connection.
 #[repr(u16)]
+#[non_exhaustive]
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum CloseCode {
     /// Indicates a normal closure, meaning that the purpose for
@@ -234,7 +235,7 @@ impl From<CloseCode> for u16 {
 
 impl<'t> From<&'t CloseCode> for u16 {
     fn from(value: &'t CloseCode) -> Self {
-        value.into()
+        (*value).into()
     }
 }
 

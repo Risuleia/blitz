@@ -30,7 +30,7 @@ pub trait NoDelay {
 
 impl NoDelay for TcpStream {
     fn set_nodelay(&mut self, no_delay: bool) -> IoResult<()> {
-        TcpStream::set_nodelay(&self, no_delay)
+        TcpStream::set_nodelay(self, no_delay)
     }
 }
 

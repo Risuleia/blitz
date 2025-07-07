@@ -1,6 +1,6 @@
 //! Compressing module
 
-#[allow(missing_docs)]
+#![allow(missing_docs)]
 use std::io::{self, Read};
 
 use flate2::{bufread::{DeflateDecoder, DeflateEncoder}, Compression};
@@ -32,13 +32,13 @@ impl Default for WebSocketCompressionConfig {
 #[allow(missing_docs)]
 #[derive(Debug, Clone, Copy)]
 pub struct Compressor {
-    no_context_takeover: bool
+    _no_context_takeover: bool
 }
 
 #[allow(missing_docs)]
 impl Compressor {
     pub fn new(no_context_takeover: bool) -> Self {
-        Self { no_context_takeover }
+        Self { _no_context_takeover: no_context_takeover }
     }
 
     pub fn compress(&mut self, data: &[u8]) -> io::Result<Vec<u8>> {
@@ -53,13 +53,13 @@ impl Compressor {
 #[allow(missing_docs)]
 #[derive(Debug, Copy, Clone)]
 pub struct Decompressor {
-    no_context_takeover: bool
+    _no_context_takeover: bool
 }
 
 #[allow(missing_docs)]
 impl Decompressor {
     pub fn new(no_context_takeover: bool) -> Self {
-        Self { no_context_takeover }
+        Self { _no_context_takeover: no_context_takeover }
     }
 
     pub fn decompress(&mut self, data: &[u8]) -> io::Result<Vec<u8>> {

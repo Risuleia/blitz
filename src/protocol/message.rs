@@ -116,6 +116,11 @@ impl IncompleteMessage {
         }
     }
 
+    /// Checks if the incomplete message is empty
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
     /// Add more data to an existing message.
     pub fn extend<T: AsRef<[u8]>>(&mut self, tail: T, limit: Option<usize>) -> Result<()> {
         let max = limit.unwrap_or(usize::MAX);
@@ -123,7 +128,7 @@ impl IncompleteMessage {
         let portion = tail.as_ref().len();
 
         if size > max || portion > max - size {
-            return Err(Error::Capacity(CapacityError::MessageTooLarge { size: size + portion, max: max }));
+            return Err(Error::Capacity(CapacityError::MessageTooLarge { size: size + portion, max }));
         }
 
         match self.collector {

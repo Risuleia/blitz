@@ -84,7 +84,7 @@ pub fn connect_with_config<Req: IntoClientRequest>(
     for attempt in 0..=max_redirects {
         let request = create_req(&parts, &uri);
 
-        match try_client_handshake(request, config.clone()) {
+        match try_client_handshake(request, config) {
             Err(Error::Http(res)) if res.status().is_redirection() && attempt < max_redirects => {
                 if let Some(location) = res.headers().get("Location") {
                     uri = location.to_str()?.parse::<Uri>()?;

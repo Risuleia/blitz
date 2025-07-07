@@ -63,7 +63,7 @@ impl AsRef<[u8]> for Utf8Bytes {
 impl AsRef<str> for Utf8Bytes {
     #[inline]
     fn as_ref(&self) -> &str {
-        &self.as_str()
+        self.as_str()
     }
 }
 
@@ -76,7 +76,7 @@ impl AsRef<Bytes> for Utf8Bytes {
 
 impl Borrow<str> for Utf8Bytes {
     fn borrow(&self) -> &str {
-        &self.as_str()
+        self.as_str()
     }
 }
 
