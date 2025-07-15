@@ -4,7 +4,16 @@ use std::io::{Read, Write};
 
 #[cfg(any(feature = "native-tls", feature = "__rustls-tls"))]
 use crate::error::{Error, UrlError};
-use crate::{client::{client_with_config, uri_mode, IntoClientRequest}, error::Result, handshake::{client::{ClientHandshake, Response}, core::HandshakeError}, protocol::{config::WebSocketConfig, websocket::WebSocket}, stream::SimplifiedStream};
+use crate::{
+    client::{client_with_config, uri_mode, IntoClientRequest},
+    error::Result,
+    handshake::{
+        client::{ClientHandshake, Response},
+        core::HandshakeError,
+    },
+    protocol::{config::WebSocketConfig, websocket::WebSocket},
+    stream::SimplifiedStream,
+};
 
 /// A connector that can be used when establishing connections, allowing to control whether
 /// `native-tls` or `rustls` is used to create a TLS connection. Or TLS can be disabled with the
@@ -21,27 +30,27 @@ pub enum Connector {
 
     /// `rustls` TLS connector
     #[cfg(feature = "__rustls-tls")]
-    Rustls(std::sync::Arc<rustls::ClientConfig>)
+    Rustls(std::sync::Arc<rustls::ClientConfig>),
 }
 
 mod encryption {
     #[cfg(feature = "native-tls")]
     pub mod native_tls {
+        use crate::{
+            error::{Error, Result, TlsError},
+            stream::{Mode, SimplifiedStream},
+        };
         use native_tls_crate::{HandshakeError as TlsHandshakeError, TlsConnector};
         use std::io::{Read, Write};
-        use crate::{
-            error::{TlsError, Error, Result},
-            stream::{SimplifiedStream, Mode}
-        };
 
         pub fn wrap_stream<S>(
             socket: S,
             domain: &str,
             mode: Mode,
-            tls_connection: Option<TlsConnector>
+            tls_connection: Option<TlsConnector>,
         ) -> Result<SimplifiedStream<S>>
-        where 
-            S: Read + Write
+        where
+            S: Read + Write,
         {
             match mode {
                 Mode::Plain => Ok(SimplifiedStream::Plain(socket)),
@@ -53,9 +62,11 @@ mod encryption {
                     match connected {
                         Err(e) => match e {
                             TlsHandshakeError::Failure(f) => Err(Error::Tls(f.into())),
-                            TlsHandshakeError::WouldBlock(_) => panic!("Bug: TLS handshake not blocked")
+                            TlsHandshakeError::WouldBlock(_) => {
+                                panic!("Bug: TLS handshake not blocked")
+                            }
                         },
-                        Ok(s) => Ok(SimplifiedStream::NativeTls(s))
+                        Ok(s) => Ok(SimplifiedStream::NativeTls(s)),
                     }
                 }
             }
@@ -64,25 +75,25 @@ mod encryption {
 
     #[cfg(feature = "__rustls-tls")]
     pub mod rustls {
+        use crate::{
+            error::{Result, TlsError},
+            stream::{Mode, SimplifiedStream},
+        };
         use rustls::{ClientConfig, ClientConnection, RootCertStore, StreamOwned};
         use rustls_pki_types::ServerName;
         use std::{
             io::{Read, Write},
-            sync::Arc
-        };
-        use crate::{
-            error::{TlsError, Result},
-            stream::{SimplifiedStream, Mode}
+            sync::Arc,
         };
 
         pub fn wrap_stream<S>(
             socket: S,
             domain: &str,
             mode: Mode,
-            tls_connector: Option<Arc<ClientConfig>>
+            tls_connector: Option<Arc<ClientConfig>>,
         ) -> Result<SimplifiedStream<S>>
-        where 
-            S: Read + Write
+        where
+            S: Read + Write,
         {
             match mode {
                 Mode::Plain => Ok(SimplifiedStream::Plain(socket)),
@@ -113,13 +124,13 @@ mod encryption {
 
                             #[cfg(feature = "rustls-tls-webpki-roots")]
                             {
-                                root_store.extend(webpki_roots::TLS_SERVER_ROOTS.iter().cloned());    
+                                root_store.extend(webpki_roots::TLS_SERVER_ROOTS.iter().cloned());
                             }
 
                             Arc::new(
                                 ClientConfig::builder()
                                     .with_root_certificates(root_store)
-                                    .with_no_client_auth()
+                                    .with_no_client_auth(),
                             )
                         }
                     };
@@ -138,22 +149,19 @@ mod encryption {
     }
 
     pub mod plain {
-        use std::io::{Read, Write};
         use crate::{
             error::{Error, Result, UrlError},
-            stream::{SimplifiedStream, Mode}
+            stream::{Mode, SimplifiedStream},
         };
+        use std::io::{Read, Write};
 
-        pub fn wrap_stream<S>(
-            socket: S,
-            mode: Mode
-        ) -> Result<SimplifiedStream<S>>
+        pub fn wrap_stream<S>(socket: S, mode: Mode) -> Result<SimplifiedStream<S>>
         where
-            S: Read + Write
+            S: Read + Write,
         {
             match mode {
                 Mode::Plain => Ok(SimplifiedStream::Plain(socket)),
-                Mode::Tls => Err(Error::Url(UrlError::TlsFeatureNotEnabled))
+                Mode::Tls => Err(Error::Url(UrlError::TlsFeatureNotEnabled)),
             }
         }
     }
@@ -165,13 +173,13 @@ type TlsErrorHandshake<S> = HandshakeError<ClientHandshake<SimplifiedStream<S>>>
 /// upgrading the stream to TLS if required.
 pub fn client_tls<R, S>(
     request: R,
-    stream: S
+    stream: S,
 ) -> Result<(WebSocket<SimplifiedStream<S>>, Response), TlsErrorHandshake<S>>
-where 
+where
     R: IntoClientRequest,
-    S: Read + Write
+    S: Read + Write,
 {
-    client_tls_with_config(request, stream, None, None)  
+    client_tls_with_config(request, stream, None, None)
 }
 
 /// The same as [`client_tls()`] but one can specify a websocket configuration,
@@ -183,18 +191,18 @@ pub fn client_tls_with_config<R, S>(
     request: R,
     stream: S,
     config: Option<WebSocketConfig>,
-    connector: Option<Connector>
+    connector: Option<Connector>,
 ) -> Result<(WebSocket<SimplifiedStream<S>>, Response), TlsErrorHandshake<S>>
-where 
+where
     R: IntoClientRequest,
-    S: Read + Write
+    S: Read + Write,
 {
     let request = request.into_client_request()?;
 
     #[cfg(any(feature = "native-tls", feature = "__rustls-tls"))]
     let domain = match request.uri().host() {
         Some(d) => Ok(d.to_string()),
-        None => Err(Error::Url(UrlError::MissingHost))
+        None => Err(Error::Url(UrlError::MissingHost)),
     }?;
 
     let mode = uri_mode(request.uri())?;
@@ -211,7 +219,7 @@ where
                 self::encryption::rustls::wrap_stream(stream, &domain, mode, Some(conn))
             }
 
-            Connector::Plain => self::encryption::plain::wrap_stream(stream, mode)
+            Connector::Plain => self::encryption::plain::wrap_stream(stream, mode),
         },
         None => {
             #[cfg(feature = "native-tls")]

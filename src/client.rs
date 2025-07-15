@@ -1,10 +1,22 @@
 //! Utilities to connect to a WebSocket as a client
 
-use std::{io::{Read, Write}, net::{SocketAddr, TcpStream, ToSocketAddrs}, result::Result as StdResult};
+use std::{
+    io::{Read, Write},
+    net::{SocketAddr, TcpStream, ToSocketAddrs},
+    result::Result as StdResult,
+};
 
 use http::{request::Parts, HeaderName, Uri};
 
-use crate::{error::{Error, Result, UrlError}, handshake::{client::{generate_key, ClientHandshake, Request, Response}, core::HandshakeError}, protocol::{config::WebSocketConfig, websocket::WebSocket}, stream::{Mode, NoDelay, SimplifiedStream}};
+use crate::{
+    error::{Error, Result, UrlError},
+    handshake::{
+        client::{generate_key, ClientHandshake, Request, Response},
+        core::HandshakeError,
+    },
+    protocol::{config::WebSocketConfig, websocket::WebSocket},
+    stream::{Mode, NoDelay, SimplifiedStream},
+};
 
 /// Connect to the given WebSocket in blocking mode.
 ///
@@ -27,11 +39,11 @@ use crate::{error::{Error, Result, UrlError}, handshake::{client::{generate_key,
 pub fn connect_with_config<Req: IntoClientRequest>(
     req: Req,
     config: Option<WebSocketConfig>,
-    max_redirects: u8
+    max_redirects: u8,
 ) -> Result<(WebSocket<SimplifiedStream<TcpStream>>, Response)> {
     fn try_client_handshake(
         request: Request,
-        config: Option<WebSocketConfig>
+        config: Option<WebSocketConfig>,
     ) -> Result<(WebSocket<SimplifiedStream<TcpStream>>, Response)> {
         let uri = request.uri();
         let mode = uri_mode(uri)?;
@@ -42,17 +54,13 @@ pub fn connect_with_config<Req: IntoClientRequest>(
         }
 
         let host = request.uri().host().ok_or(Error::Url(UrlError::MissingHost))?;
-        let host = if host.starts_with('[') {
-            &host[1..host.len() - 1]
-        } else {
-            host
-        };
+        let host = if host.starts_with('[') { &host[1..host.len() - 1] } else { host };
         let port = uri.port_u16().unwrap_or(match mode {
             Mode::Plain => 80,
-            Mode::Tls => 443
+            Mode::Tls => 443,
         });
         let addresses = (host, port).to_socket_addrs()?;
-        
+
         let mut stream = connect_to_some(addresses.as_slice(), request.uri())?;
         NoDelay::set_nodelay(&mut stream, true)?;
 
@@ -64,15 +72,13 @@ pub fn connect_with_config<Req: IntoClientRequest>(
 
         client.map_err(|e| match e {
             HandshakeError::Failure(f) => f,
-            HandshakeError::Interrupted(_) => panic!("Bug: blockign handshake not blocked")
+            HandshakeError::Interrupted(_) => panic!("Bug: blockign handshake not blocked"),
         })
     }
 
     fn create_req(parts: &Parts, uri: &Uri) -> Request {
-        let mut builder = Request::builder()
-        .uri(uri.clone())
-        .method(parts.method.clone())
-        .version(parts.version);
+        let mut builder =
+            Request::builder().uri(uri.clone()).method(parts.method.clone()).version(parts.version);
 
         *builder.headers_mut().expect("Failed to create `Request`") = parts.headers.clone();
         builder.body(()).expect("Failed to create `Request`")
@@ -92,8 +98,8 @@ pub fn connect_with_config<Req: IntoClientRequest>(
                 } else {
                     return Err(Error::Http(res));
                 }
-            },
-            other => return other
+            }
+            other => return other,
         }
     }
 
@@ -112,7 +118,9 @@ pub fn connect_with_config<Req: IntoClientRequest>(
 /// This function uses `native_tls` or `rustls` to do TLS depending on the feature flags enabled. If
 /// you want to use other TLS libraries, use `client` instead. There is no need to enable any of
 /// the `*-tls` features if you don't call `connect` since it's the only function that uses them.
-pub fn connect<Req: IntoClientRequest>(req: Req) -> Result<(WebSocket<SimplifiedStream<TcpStream>>, Response)> {
+pub fn connect<Req: IntoClientRequest>(
+    req: Req,
+) -> Result<(WebSocket<SimplifiedStream<TcpStream>>, Response)> {
     connect_with_config(req, None, 3)
 }
 
@@ -135,11 +143,11 @@ fn connect_to_some(addresses: &[SocketAddr], uri: &Uri) -> Result<TcpStream> {
 pub fn client_with_config<Stream, Req>(
     req: Req,
     stream: Stream,
-    config: Option<WebSocketConfig>
+    config: Option<WebSocketConfig>,
 ) -> StdResult<(WebSocket<Stream>, Response), HandshakeError<ClientHandshake<Stream>>>
-where 
+where
     Stream: Read + Write,
-    Req: IntoClientRequest
+    Req: IntoClientRequest,
 {
     ClientHandshake::start(stream, req.into_client_request()?, config)?.handshake()
 }
@@ -151,11 +159,11 @@ where
 /// Any stream supporting `Read + Write` will do.
 pub fn client<Stream, Req>(
     req: Req,
-    stream: Stream
+    stream: Stream,
 ) -> StdResult<(WebSocket<Stream>, Response), HandshakeError<ClientHandshake<Stream>>>
-where 
+where
     Stream: Read + Write,
-    Req: IntoClientRequest
+    Req: IntoClientRequest,
 {
     client_with_config(req, stream, None)
 }
@@ -168,7 +176,7 @@ pub fn uri_mode(uri: &Uri) -> Result<Mode> {
     match uri.scheme_str() {
         Some("ws") => Ok(Mode::Plain),
         Some("wss") => Ok(Mode::Tls),
-        _ => Err(Error::Url(UrlError::UnsupportedScheme))
+        _ => Err(Error::Url(UrlError::UnsupportedScheme)),
     }
 }
 
@@ -285,7 +293,7 @@ pub struct ClientRequestBuilder {
     /// Additional [`Request`] handshake headers
     additional_headers: Vec<(String, String)>,
     /// Handshake subprotocols
-    subprotocols: Vec<String>
+    subprotocols: Vec<String>,
 }
 
 impl ClientRequestBuilder {
@@ -299,7 +307,7 @@ impl ClientRequestBuilder {
     pub fn with_header<K, V>(mut self, key: K, value: V) -> Self
     where
         K: Into<String>,
-        V: Into<String>
+        V: Into<String>,
     {
         self.additional_headers.push((key.into(), value.into()));
         self
@@ -308,7 +316,7 @@ impl ClientRequestBuilder {
     /// Adds `protocol` to the handshake request subprotocols (`Sec-WebSocket-Protocol`)
     pub fn with_subprotocol<P>(mut self, protocol: P) -> Self
     where
-        P: Into<String>
+        P: Into<String>,
     {
         self.subprotocols.push(protocol.into());
         self
@@ -319,7 +327,7 @@ impl IntoClientRequest for ClientRequestBuilder {
     fn into_client_request(self) -> Result<Request> {
         let mut req = self.uri.into_client_request()?;
         let headers = req.headers_mut();
-        
+
         for (k, v) in self.additional_headers {
             let key = HeaderName::try_from(k)?;
             let value = v.parse()?;

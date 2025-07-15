@@ -2,16 +2,22 @@
 
 use bytes::Bytes;
 
-use crate::{error::{CapacityError, Error, Result}, protocol::{frame::{CloseFrame, Frame, Utf8Bytes}, message::string_lib::StringCollector}};
+use crate::{
+    error::{CapacityError, Error, Result},
+    protocol::{
+        frame::{CloseFrame, Frame, Utf8Bytes},
+        message::string_lib::StringCollector,
+    },
+};
 
 mod string_lib {
-    use utf8::DecodeError;
     use crate::error::{Error, Result};
+    use utf8::DecodeError;
 
     #[derive(Debug)]
     pub struct StringCollector {
         data: String,
-        incomplete: Option<utf8::Incomplete>
+        incomplete: Option<utf8::Incomplete>,
     }
 
     impl StringCollector {
@@ -34,7 +40,9 @@ mod string_lib {
 
                     match result {
                         Ok(s) => self.data.push_str(s),
-                        Err(result_bytes) => return Err(Error::Utf8(String::from_utf8_lossy(result_bytes).into()))
+                        Err(result_bytes) => {
+                            return Err(Error::Utf8(String::from_utf8_lossy(result_bytes).into()))
+                        }
                     }
                 } else {
                     input = &[];
@@ -47,16 +55,16 @@ mod string_lib {
                     Ok(s) => {
                         self.data.push_str(s);
                         Ok(())
-                    },
+                    }
                     Err(DecodeError::Incomplete { valid_prefix, incomplete_suffix }) => {
                         self.data.push_str(valid_prefix);
                         self.incomplete = Some(incomplete_suffix);
 
                         Ok(())
-                    },
+                    }
                     Err(DecodeError::Invalid { valid_prefix, invalid_sequence, .. }) => {
                         self.data.push_str(valid_prefix);
-                        
+
                         Err(Error::Utf8(String::from_utf8_lossy(invalid_sequence).into()))
                     }
                 }
@@ -78,13 +86,13 @@ mod string_lib {
 /// A struct representing the incomplete message.
 #[derive(Debug)]
 pub struct IncompleteMessage {
-    collector: IncompleteMessageCollector
+    collector: IncompleteMessageCollector,
 }
 
 #[derive(Debug)]
 enum IncompleteMessageCollector {
     Text(StringCollector),
-    Binary(Vec<u8>)
+    Binary(Vec<u8>),
 }
 
 /// The type of incomplete message.
@@ -94,7 +102,7 @@ pub enum IncompleteMessageType {
     /// Text type
     Text,
     /// Binary type
-    Binary
+    Binary,
 }
 
 impl IncompleteMessage {
@@ -103,8 +111,10 @@ impl IncompleteMessage {
         IncompleteMessage {
             collector: match msg_type {
                 IncompleteMessageType::Binary => IncompleteMessageCollector::Binary(Vec::new()),
-                IncompleteMessageType::Text => IncompleteMessageCollector::Text(StringCollector::new())
-            }
+                IncompleteMessageType::Text => {
+                    IncompleteMessageCollector::Text(StringCollector::new())
+                }
+            },
         }
     }
 
@@ -112,7 +122,7 @@ impl IncompleteMessage {
     pub fn len(&self) -> usize {
         match self.collector {
             IncompleteMessageCollector::Binary(ref b) => b.len(),
-            IncompleteMessageCollector::Text(ref t) => t.len()
+            IncompleteMessageCollector::Text(ref t) => t.len(),
         }
     }
 
@@ -128,15 +138,18 @@ impl IncompleteMessage {
         let portion = tail.as_ref().len();
 
         if size > max || portion > max - size {
-            return Err(Error::Capacity(CapacityError::MessageTooLarge { size: size + portion, max }));
+            return Err(Error::Capacity(CapacityError::MessageTooLarge {
+                size: size + portion,
+                max,
+            }));
         }
 
         match self.collector {
             IncompleteMessageCollector::Binary(ref mut b) => {
                 b.extend(tail.as_ref());
                 Ok(())
-            },
-            IncompleteMessageCollector::Text(ref mut t) => t.extend(tail)
+            }
+            IncompleteMessageCollector::Text(ref mut t) => t.extend(tail),
         }
     }
 
@@ -166,22 +179,22 @@ pub enum Message {
     /// A close (control) message
     Close(Option<CloseFrame>),
     /// Raw frame
-    Frame(Frame)
+    Frame(Frame),
 }
 
 impl Message {
     /// Create a new text WebSocket message from a stringable.
     pub fn new_text<S>(string: S) -> Message
-    where 
-        S: Into<Utf8Bytes>
+    where
+        S: Into<Utf8Bytes>,
     {
         Message::Text(string.into())
     }
 
     /// Create a new binary WebSocket message by converting to `Bytes`.
     pub fn new_binary<B>(binary: B) -> Message
-    where 
-        B: Into<Bytes>
+    where
+        B: Into<Bytes>,
     {
         Message::Binary(binary.into())
     }
@@ -205,7 +218,7 @@ impl Message {
     pub fn is_binary(&self) -> bool {
         matches!(self, Message::Binary(_))
     }
-    
+
     /// Get the length of the WebSocket message.
     pub fn len(&self) -> usize {
         match *self {
@@ -229,7 +242,7 @@ impl Message {
             Self::Binary(b) | Self::Ping(b) | Self::Pong(b) => b,
             Self::Close(None) => <_>::default(),
             Self::Close(Some(frame)) => frame.reason.into(),
-            Self::Frame(frame) => frame.into_payload()
+            Self::Frame(frame) => frame.into_payload(),
         }
     }
 }
@@ -275,7 +288,6 @@ impl From<Message> for Bytes {
     }
 }
 
-
 impl std::fmt::Display for Message {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -285,7 +297,7 @@ impl std::fmt::Display for Message {
             Message::Pong(_) => write!(f, "Pong"),
             Message::Close(Some(frame)) => write!(f, "Close({}, {})", frame.code, frame.reason),
             Message::Close(None) => write!(f, "Close"),
-            _ => Ok(())
+            _ => Ok(()),
         }
     }
 }

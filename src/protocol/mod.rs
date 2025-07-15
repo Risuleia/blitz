@@ -1,7 +1,7 @@
 //! Protocol module
 
-pub mod websocket;
+pub mod compression;
+pub mod config;
 pub mod frame;
 pub mod message;
-pub mod config;
-pub mod compression;
+pub mod websocket;

@@ -1,11 +1,17 @@
 //! WebSocket handshake control
 
-use std::{fmt::{Debug, Display}, io::{Read, Write}};
+use std::{
+    fmt::{Debug, Display},
+    io::{Read, Write},
+};
 
 use base64::Engine;
 use sha1::{Digest, Sha1};
 
-use crate::{error::{Error, Result}, handshake::machine::{HandshakeMachine, RoundResult, StageResult, TryParse}};
+use crate::{
+    error::{Error, Result},
+    handshake::machine::{HandshakeMachine, RoundResult, StageResult, TryParse},
+};
 
 /// A WebSocket Handshake
 #[derive(Debug)]
@@ -13,7 +19,7 @@ pub struct MidHandshake<Role: HandshakeRole> {
     /// The Handshake role
     pub role: Role,
     /// The handshake machine instance
-    pub machine: HandshakeMachine<Role::InternalStream>
+    pub machine: HandshakeMachine<Role::InternalStream>,
 }
 
 impl<Role: HandshakeRole> MidHandshake<Role> {
@@ -34,16 +40,13 @@ impl<Role: HandshakeRole> MidHandshake<Role> {
         loop {
             machine = match machine.single_round()? {
                 RoundResult::WouldBlock(m) => {
-                    return Err(HandshakeError::Interrupted(MidHandshake {
-                        machine: m,
-                        ..self
-                    }))
-                },
+                    return Err(HandshakeError::Interrupted(MidHandshake { machine: m, ..self }))
+                }
                 RoundResult::Incomplete(m) => m,
                 RoundResult::StageFinished(s) => match self.role.stage_finished(s)? {
                     ProcessingResult::Continue(m) => m,
-                    ProcessingResult::Done(res) => return Ok(res)
-                }
+                    ProcessingResult::Done(res) => return Ok(res),
+                },
             }
         }
     }
@@ -54,14 +57,14 @@ pub enum HandshakeError<Role: HandshakeRole> {
     /// Handshake was interrupted (would block)
     Interrupted(MidHandshake<Role>),
     /// Handshake failed
-    Failure(Error)
+    Failure(Error),
 }
 
 impl<Role: HandshakeRole> Debug for HandshakeError<Role> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Interrupted(_) => write!(f, "HandshakeError::Interrupted(...)"),
-            Self::Failure(e) => write!(f, "HandshakeError::Failure({:?})", e)
+            Self::Failure(e) => write!(f, "HandshakeError::Failure({:?})", e),
         }
     }
 }
@@ -70,7 +73,7 @@ impl<Role: HandshakeRole> Display for HandshakeError<Role> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Interrupted(_) => write!(f, "Interrupted handshake (WouldBlock)"),
-            Self::Failure(e) => write!(f, "{e}")
+            Self::Failure(e) => write!(f, "{e}"),
         }
     }
 }
@@ -95,7 +98,7 @@ pub trait HandshakeRole {
     #[doc(hidden)]
     fn stage_finished(
         &mut self,
-        finish: StageResult<Self::IncomingData, Self::InternalStream>
+        finish: StageResult<Self::IncomingData, Self::InternalStream>,
     ) -> Result<ProcessingResult<Self::InternalStream, Self::FinalResult>>;
 }
 
@@ -103,11 +106,11 @@ pub trait HandshakeRole {
 #[derive(Debug)]
 pub enum ProcessingResult<Stream, FinalResult> {
     Continue(HandshakeMachine<Stream>),
-    Done(FinalResult)
+    Done(FinalResult),
 }
 
 /// Derives the `Sec-WebSocket-Accept` header value from a `Sec-WebSocket-Key` request header.
-/// 
+///
 /// This function can be used to perform a handshake before passing a raw TCP stream to
 /// [`WebSocket::with_config`][crate::protocol::WebSocket::with_config]
 pub fn derive_accept_key(req_key: &[u8]) -> String {

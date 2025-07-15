@@ -1,6 +1,9 @@
 //! Helper traits to ease non-blocking handling.
 
-use std::{io::{Error as IoError, ErrorKind as IoErrorKind}, result::Result as StdResult};
+use std::{
+    io::{Error as IoError, ErrorKind as IoErrorKind},
+    result::Result as StdResult,
+};
 
 use crate::error::Error;
 
@@ -14,7 +17,7 @@ impl NonBlockingError for IoError {
     fn into_non_blocking(self) -> Option<Self> {
         match self.kind() {
             IoErrorKind::WouldBlock => None,
-            _ => Some(self)
+            _ => Some(self),
         }
     }
 }
@@ -23,7 +26,7 @@ impl NonBlockingError for Error {
     fn into_non_blocking(self) -> Option<Self> {
         match self {
             Error::Io(io_err) => io_err.into_non_blocking().map(Error::Io),
-            other => Some(other)
+            other => Some(other),
         }
     }
 }
@@ -41,7 +44,7 @@ pub trait NonBlockingResult {
 
 impl<T, E> NonBlockingResult for StdResult<T, E>
 where
-    E: NonBlockingError
+    E: NonBlockingError,
 {
     type Result = StdResult<Option<T>, E>;
 
@@ -50,8 +53,8 @@ where
             Ok(val) => Ok(Some(val)),
             Err(err) => match err.into_non_blocking() {
                 Some(real_err) => Err(real_err),
-                None => Ok(None)
-            }
+                None => Ok(None),
+            },
         }
     }
 }

@@ -3,7 +3,10 @@
 #![allow(missing_docs)]
 use std::io::{self, Read};
 
-use flate2::{bufread::{DeflateDecoder, DeflateEncoder}, Compression};
+use flate2::{
+    bufread::{DeflateDecoder, DeflateEncoder},
+    Compression,
+};
 
 const PERMESSAFE_DEFLATE_TRAILER: &[u8] = &[0x00, 0x00, 0xff, 0xff];
 
@@ -24,7 +27,7 @@ impl Default for WebSocketCompressionConfig {
             client_no_context_takeover: false,
             server_no_context_takeover: false,
             client_max_window_bits: None,
-            server_max_window_bits: None
+            server_max_window_bits: None,
         }
     }
 }
@@ -32,7 +35,7 @@ impl Default for WebSocketCompressionConfig {
 #[allow(missing_docs)]
 #[derive(Debug, Clone, Copy)]
 pub struct Compressor {
-    _no_context_takeover: bool
+    _no_context_takeover: bool,
 }
 
 #[allow(missing_docs)]
@@ -53,7 +56,7 @@ impl Compressor {
 #[allow(missing_docs)]
 #[derive(Debug, Copy, Clone)]
 pub struct Decompressor {
-    _no_context_takeover: bool
+    _no_context_takeover: bool,
 }
 
 #[allow(missing_docs)]

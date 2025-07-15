@@ -21,7 +21,7 @@ impl<'b: 'h, 'h> FromHttparse<&'b [Header<'h>]> for HeaderMap {
         for h in raw {
             headers.append(
                 HeaderName::from_bytes(h.name.as_bytes())?,
-                HeaderValue::from_bytes(h.value)?
+                HeaderValue::from_bytes(h.value)?,
             );
         }
 
@@ -35,7 +35,7 @@ impl TryParse for HeaderMap {
 
         Ok(match parse_headers(data, &mut hbuffer)? {
             httparse::Status::Partial => None,
-            httparse::Status::Complete((size, hdr)) => Some((size, HeaderMap::from_httparse(hdr)?))
+            httparse::Status::Complete((size, hdr)) => Some((size, HeaderMap::from_httparse(hdr)?)),
         })
     }
 }

@@ -2,7 +2,14 @@
 
 use std::io::{Read, Write};
 
-use crate::{error::Result, handshake::{core::HandshakeError, server::{Callback, NoCallback, ServerHandshake}}, protocol::{config::WebSocketConfig, websocket::WebSocket}};
+use crate::{
+    error::Result,
+    handshake::{
+        core::HandshakeError,
+        server::{Callback, NoCallback, ServerHandshake},
+    },
+    protocol::{config::WebSocketConfig, websocket::WebSocket},
+};
 
 /// Accept the given Stream as a WebSocket.
 ///
@@ -10,7 +17,9 @@ use crate::{error::Result, handshake::{core::HandshakeError, server::{Callback, 
 /// If you want TLS support, use `native_tls::TlsStream`, `rustls::Stream` or
 /// `openssl::ssl::SslStream` for the stream here. Any `Read + Write` streams are supported,
 /// including those from `Mio` and others.
-pub fn accept<S: Read + Write>(stream: S) -> Result<WebSocket<S>, HandshakeError<ServerHandshake<S, NoCallback>>> {
+pub fn accept<S: Read + Write>(
+    stream: S,
+) -> Result<WebSocket<S>, HandshakeError<ServerHandshake<S, NoCallback>>> {
     accept_with_config(stream, None)
 }
 
@@ -25,7 +34,7 @@ pub fn accept<S: Read + Write>(stream: S) -> Result<WebSocket<S>, HandshakeError
 /// including those from `Mio` and others.
 pub fn accept_with_config<S: Read + Write>(
     stream: S,
-    config: Option<WebSocketConfig>
+    config: Option<WebSocketConfig>,
 ) -> Result<WebSocket<S>, HandshakeError<ServerHandshake<S, NoCallback>>> {
     accept_header_with_config(stream, NoCallback, config)
 }
@@ -41,7 +50,7 @@ pub fn accept_with_config<S: Read + Write>(
 pub fn accept_header_with_config<S: Read + Write, C: Callback>(
     stream: S,
     callback: C,
-    config: Option<WebSocketConfig>
+    config: Option<WebSocketConfig>,
 ) -> Result<WebSocket<S>, HandshakeError<ServerHandshake<S, C>>> {
     ServerHandshake::start(stream, callback, config).handshake()
 }
@@ -53,7 +62,7 @@ pub fn accept_header_with_config<S: Read + Write, C: Callback>(
 /// requests and is able to add extra headers to the reply.
 pub fn accept_header<S: Read + Write, C: Callback>(
     stream: S,
-    callback: C
+    callback: C,
 ) -> Result<WebSocket<S>, HandshakeError<ServerHandshake<S, C>>> {
     accept_header_with_config(stream, callback, None)
 }

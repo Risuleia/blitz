@@ -47,8 +47,8 @@ pub use bytes::Bytes;
 #[cfg(feature = "handshake")]
 pub use crate::{
     client::{client, connect, ClientRequestBuilder},
-    server::{accept, accept_with_config, accept_header, accept_header_with_config},
-    handshake::{client::ClientHandshake, server::ServerHandshake, HandshakeError}
+    handshake::{client::ClientHandshake, server::ServerHandshake, HandshakeError},
+    server::{accept, accept_header, accept_header_with_config, accept_with_config},
 };
 
 #[cfg(all(any(feature = "native-tls", feature = "__rustls-tls"), feature = "handshake"))]

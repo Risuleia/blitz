@@ -1,10 +1,27 @@
 //! Server handshake machine
 
-use http::{HeaderMap, Method, Request as HttpRequest, Response as HttpResponse, StatusCode, Version};
+use http::{
+    HeaderMap, Method, Request as HttpRequest, Response as HttpResponse, StatusCode, Version,
+};
 use httparse::{Status, EMPTY_HEADER};
-use std::{io::{Read, Write}, marker::PhantomData, result::Result as StdResult};
+use std::{
+    io::{Read, Write},
+    marker::PhantomData,
+    result::Result as StdResult,
+};
 
-use crate::{error::{Error, ProtocolError, Result}, handshake::{core::{derive_accept_key, HandshakeRole, MidHandshake, ProcessingResult}, headers::{FromHttparse, MAX_HEADERS}, machine::{HandshakeMachine, StageResult, TryParse}}, protocol::{config::WebSocketConfig, websocket::{OperationMode, WebSocket}}};
+use crate::{
+    error::{Error, ProtocolError, Result},
+    handshake::{
+        core::{derive_accept_key, HandshakeRole, MidHandshake, ProcessingResult},
+        headers::{FromHttparse, MAX_HEADERS},
+        machine::{HandshakeMachine, StageResult, TryParse},
+    },
+    protocol::{
+        config::WebSocketConfig,
+        websocket::{OperationMode, WebSocket},
+    },
+};
 
 /// Server Request type
 pub type Request = HttpRequest<()>;
@@ -42,17 +59,12 @@ fn create_parts<T>(req: &HttpRequest<T>) -> Result<http::response::Builder> {
         return Err(Error::Protocol(ProtocolError::MissingUpgradeHeader));
     }
 
-    if !headers
-        .get("Sec-WebSocket-Version")
-        .map(|h| h == "13")
-        .unwrap_or(false)
-    {
+    if !headers.get("Sec-WebSocket-Version").map(|h| h == "13").unwrap_or(false) {
         return Err(Error::Protocol(ProtocolError::MissingVersionHeader));
     }
 
-    let key = headers
-        .get("Sec-WebSocket-Key")
-        .ok_or(Error::Protocol(ProtocolError::MissingKeyHeader))?;
+    let key =
+        headers.get("Sec-WebSocket-Key").ok_or(Error::Protocol(ProtocolError::MissingKeyHeader))?;
 
     let builder = Response::builder()
         .status(StatusCode::SWITCHING_PROTOCOLS)
@@ -72,7 +84,7 @@ pub fn create_response(req: &Request) -> Result<Response> {
 /// Creates a response for the request with a custom body
 pub fn create_response_with_body<T1, T2>(
     req: &HttpRequest<T1>,
-    generate_body: impl FnOnce() -> T2
+    generate_body: impl FnOnce() -> T2,
 ) -> Result<HttpResponse<T2>> {
     Ok(create_parts(req)?.body(generate_body())?)
 }
@@ -95,7 +107,7 @@ impl TryParse for Request {
 
         Ok(match req.parse(data)? {
             Status::Complete(n) => Some((n, Request::from_httparse(req)?)),
-            Status::Partial => None
+            Status::Partial => None,
         })
     }
 }
@@ -121,7 +133,7 @@ impl<'b: 'h, 'h> FromHttparse<httparse::Request<'h, 'b>> for Request {
 }
 
 /// Callback trait
-/// 
+///
 /// The callback is called when the server receives an incoming WebSocket
 /// handshake request from the client. Specifying a callback allows you to analyze incoming headers
 /// and add additional headers to the response that the server sends to the client and / or reject the
@@ -135,7 +147,7 @@ pub trait Callback: Sized {
 
 impl<F> Callback for F
 where
-    F: FnOnce(&Request, Response) -> StdResult<Response, ErrorResponse>
+    F: FnOnce(&Request, Response) -> StdResult<Response, ErrorResponse>,
 {
     fn on_request(self, req: &Request, res: Response) -> StdResult<Response, ErrorResponse> {
         self(req, res)
@@ -180,8 +192,8 @@ impl<S: Read + Write, C: Callback> ServerHandshake<S, C> {
                 callback: Some(callback),
                 config,
                 error_response: None,
-                _marker: PhantomData
-            }
+                _marker: PhantomData,
+            },
         }
     }
 }
@@ -192,11 +204,11 @@ impl<S: Read + Write, C: Callback> HandshakeRole for ServerHandshake<S, C> {
     type FinalResult = WebSocket<S>;
 
     fn stage_finished(
-            &mut self,
-            finish: StageResult<Self::IncomingData, Self::InternalStream>
-        ) -> Result<ProcessingResult<Self::InternalStream, Self::FinalResult>> {
+        &mut self,
+        finish: StageResult<Self::IncomingData, Self::InternalStream>,
+    ) -> Result<ProcessingResult<Self::InternalStream, Self::FinalResult>> {
         match finish {
-            StageResult::DoneReading { result, stream , tail } => {
+            StageResult::DoneReading { result, stream, tail } => {
                 if !tail.is_empty() {
                     return Err(Error::Protocol(ProtocolError::JunkAfterRequest));
                 }
@@ -212,9 +224,11 @@ impl<S: Read + Write, C: Callback> HandshakeRole for ServerHandshake<S, C> {
                     Ok(resp) => {
                         let mut output = vec![];
                         write_response(&mut output, &resp)?;
-                        
-                        Ok(ProcessingResult::Continue(HandshakeMachine::start_write(stream, output)))
-                    },
+
+                        Ok(ProcessingResult::Continue(HandshakeMachine::start_write(
+                            stream, output,
+                        )))
+                    }
                     Err(resp) => {
                         if resp.status().is_success() {
                             return Err(Error::Protocol(ProtocolError::CustomResponseSuccessful));
@@ -230,17 +244,26 @@ impl<S: Read + Write, C: Callback> HandshakeRole for ServerHandshake<S, C> {
                             output.extend_from_slice(body.as_bytes());
                         }
 
-                        Ok(ProcessingResult::Continue(HandshakeMachine::start_write(stream, output)))
+                        Ok(ProcessingResult::Continue(HandshakeMachine::start_write(
+                            stream, output,
+                        )))
                     }
                 }
-            },
+            }
             StageResult::DoneWriting(stream) => {
                 if let Some(err) = self.error_response.take() {
                     let (parts, body) = err.into_parts();
-                    return Err(Error::Http(HttpResponse::from_parts(parts, body.map(|s| s.into_bytes()))));
+                    return Err(Error::Http(HttpResponse::from_parts(
+                        parts,
+                        body.map(|s| s.into_bytes()),
+                    )));
                 }
-                
-                Ok(ProcessingResult::Done(WebSocket::new(stream, OperationMode::Server, self.config)))
+
+                Ok(ProcessingResult::Done(WebSocket::new(
+                    stream,
+                    OperationMode::Server,
+                    self.config,
+                )))
             }
         }
     }

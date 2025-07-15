@@ -6,7 +6,11 @@
 
 #[cfg(feature = "__rustls-tls")]
 use std::ops::Deref;
-use std::{fmt::Debug, io::{Read, Write, Result as IoResult}, net::TcpStream};
+use std::{
+    fmt::Debug,
+    io::{Read, Result as IoResult, Write},
+    net::TcpStream,
+};
 
 #[cfg(feature = "native-tls")]
 use native_tls_crate::TlsStream;
@@ -19,7 +23,7 @@ pub enum Mode {
     /// Stream mode, either plain TCP or TLS.
     Plain,
     /// TLS mode (`wss://` URL).
-    Tls
+    Tls,
 }
 
 /// Trait to switch TCP_NODELAY.
@@ -43,10 +47,10 @@ impl<S: Read + Write + NoDelay> NoDelay for TlsStream<S> {
 
 #[cfg(feature = "__rustls-tls")]
 impl<S, SD, T> NoDelay for StreamOwned<S, T>
-where 
+where
     S: Deref<Target = rustls::ConnectionCommon<SD>>,
     SD: rustls::SideData,
-    T: Read + Write + NoDelay
+    T: Read + Write + NoDelay,
 {
     fn set_nodelay(&mut self, no_delay: bool) -> IoResult<()> {
         self.sock.set_nodelay(no_delay)
@@ -66,7 +70,7 @@ pub enum SimplifiedStream<S: Read + Write> {
 
     /// Encrypted socket stream using `rustls`.
     #[cfg(feature = "__rustls-tls")]
-    Rustls(rustls::StreamOwned<rustls::ClientConnection, S>)
+    Rustls(rustls::StreamOwned<rustls::ClientConnection, S>),
 }
 
 impl<S: Read + Write + Debug> Debug for SimplifiedStream<S> {
@@ -80,7 +84,7 @@ impl<S: Read + Write + Debug> Debug for SimplifiedStream<S> {
             #[cfg(feature = "__rustls-tls")]
             Self::Rustls(s) => {
                 struct RustlsStreamDebug<'a, S: Read + Write>(
-                    &'a rustls::StreamOwned<rustls::ClientConnection, S>
+                    &'a rustls::StreamOwned<rustls::ClientConnection, S>,
                 );
 
                 impl<S: Read + Write + Debug> Debug for RustlsStreamDebug<'_, S> {

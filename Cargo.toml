@@ -1,10 +1,10 @@
 [package]
-name = "blitz"
+name = "blitz-ws"
 version = "0.1.0"
 edition = "2021"
 authors = ["Risuleia"]
-description = "A minimal WebSocket + HTTP server implementation in Rust"
-license = "MIT"
+description = "Minimal stream-based WebSocket library"
+license = "MIT OR Apache-2.0"
 repository = "https://github.com/Risuleia/blitz"
 readme = "README.md"
 keywords = ["websocket", "http", "server"]

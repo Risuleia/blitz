@@ -1,12 +1,29 @@
 //! Client handshake machine
 
-use std::{io::{Read, Write}, marker::PhantomData};
+use std::{
+    io::{Read, Write},
+    marker::PhantomData,
+};
 
 use base64::Engine;
-use http::{HeaderMap, HeaderName, Method, Request as HttpRequest, Response as HttpResponse, StatusCode, Version};
+use http::{
+    HeaderMap, HeaderName, Method, Request as HttpRequest, Response as HttpResponse, StatusCode,
+    Version,
+};
 use httparse::{Status, EMPTY_HEADER};
 
-use crate::{error::{Error, ProtocolError, Result, SubProtocolError, UrlError}, handshake::{core::{derive_accept_key, HandshakeRole, MidHandshake, ProcessingResult}, headers::{FromHttparse, MAX_HEADERS}, machine::{HandshakeMachine, StageResult, TryParse}}, protocol::{config::WebSocketConfig, websocket::{OperationMode, WebSocket}}};
+use crate::{
+    error::{Error, ProtocolError, Result, SubProtocolError, UrlError},
+    handshake::{
+        core::{derive_accept_key, HandshakeRole, MidHandshake, ProcessingResult},
+        headers::{FromHttparse, MAX_HEADERS},
+        machine::{HandshakeMachine, StageResult, TryParse},
+    },
+    protocol::{
+        config::WebSocketConfig,
+        websocket::{OperationMode, WebSocket},
+    },
+};
 
 /// Client Request type
 pub type Request = HttpRequest<()>;
@@ -18,14 +35,18 @@ pub type Response = HttpResponse<Option<Vec<u8>>>;
 pub struct ClientHandshake<S> {
     verify_data: VerifyData,
     config: Option<WebSocketConfig>,
-    _marker: PhantomData<S>
+    _marker: PhantomData<S>,
 }
 
 impl<S: Read + Write> ClientHandshake<S> {
     /// Initiate a client handshake
-    pub fn start(stream: S, req: Request, config: Option<WebSocketConfig>) -> Result<MidHandshake<Self>> {
+    pub fn start(
+        stream: S,
+        req: Request,
+        config: Option<WebSocketConfig>,
+    ) -> Result<MidHandshake<Self>> {
         if req.method() != Method::GET {
-            return Err(Error::Protocol(ProtocolError::InvalidHttpMethod))
+            return Err(Error::Protocol(ProtocolError::InvalidHttpMethod));
         }
         if req.version() < Version::HTTP_11 {
             return Err(Error::Protocol(ProtocolError::InvalidHttpVersion));
@@ -42,7 +63,7 @@ impl<S: Read + Write> ClientHandshake<S> {
             ClientHandshake {
                 verify_data: VerifyData { accept_key, subprotocols },
                 config,
-                _marker: PhantomData
+                _marker: PhantomData,
             }
         };
 
@@ -56,24 +77,29 @@ impl<S: Read + Write> HandshakeRole for ClientHandshake<S> {
     type FinalResult = (WebSocket<S>, Response);
 
     fn stage_finished(
-            &mut self,
-            finish: StageResult<Self::IncomingData, Self::InternalStream>
-        ) -> Result<ProcessingResult<Self::InternalStream, Self::FinalResult>> {
+        &mut self,
+        finish: StageResult<Self::IncomingData, Self::InternalStream>,
+    ) -> Result<ProcessingResult<Self::InternalStream, Self::FinalResult>> {
         Ok(match finish {
             StageResult::DoneWriting(stream) => {
                 ProcessingResult::Continue(HandshakeMachine::start_read(stream))
-            },
-            StageResult::DoneReading { result,   stream, tail } => {
+            }
+            StageResult::DoneReading { result, stream, tail } => {
                 let res = match self.verify_data.verify_response(result) {
                     Ok(r) => r,
                     Err(Error::Http(mut e)) => {
                         *e.body_mut() = Some(tail);
                         return Err(Error::Http(e));
-                    },
-                    Err(e) => return Err(e)
+                    }
+                    Err(e) => return Err(e),
                 };
 
-                let websocket = WebSocket::from_partially_read(stream, tail, OperationMode::Client, self.config);
+                let websocket = WebSocket::from_partially_read(
+                    stream,
+                    tail,
+                    OperationMode::Client,
+                    self.config,
+                );
                 ProcessingResult::Done((websocket, res))
             }
         })
@@ -88,17 +114,19 @@ pub fn generate_request(mut request: Request) -> Result<(Vec<u8>, String)> {
         "GET {path} {version:?}\r\n",
         path = request.uri().path_and_query().ok_or(Error::Url(UrlError::NoPathOrQuery))?.as_str(),
         version = request.version()
-    ).unwrap();
+    )
+    .unwrap();
 
     const KEY_HEADERNAME: &str = "Sec-WebSocket-Key";
-    const WEBSOCKET_HEADERS: [&str; 5] = ["Host", "Connection", "Upgrade", "Sec-WebSocket-Version", KEY_HEADERNAME];
+    const WEBSOCKET_HEADERS: [&str; 5] =
+        ["Host", "Connection", "Upgrade", "Sec-WebSocket-Version", KEY_HEADERNAME];
 
     let key = request
         .headers()
         .get(KEY_HEADERNAME)
         .ok_or_else(|| {
             Error::Protocol(ProtocolError::InvalidHeader(
-                HeaderName::from_bytes(KEY_HEADERNAME.as_bytes()).unwrap()
+                HeaderName::from_bytes(KEY_HEADERNAME.as_bytes()).unwrap(),
             ))
         })?
         .to_str()?
@@ -108,7 +136,7 @@ pub fn generate_request(mut request: Request) -> Result<(Vec<u8>, String)> {
     for &header in &WEBSOCKET_HEADERS {
         let val = headers.remove(header).ok_or_else(|| {
             Error::Protocol(ProtocolError::InvalidHeader(
-                HeaderName::from_bytes(header.as_bytes()).unwrap()
+                HeaderName::from_bytes(header.as_bytes()).unwrap(),
             ))
         })?;
 
@@ -119,10 +147,12 @@ pub fn generate_request(mut request: Request) -> Result<(Vec<u8>, String)> {
             value = val.to_str().map_err(|e| {
                 Error::Utf8(format!("{e} for header name '{header}' with value: {val:?}"))
             })?
-        ).unwrap();
+        )
+        .unwrap();
     }
 
-    let insensitive: Vec<String> = WEBSOCKET_HEADERS.iter().map(|h| h.to_ascii_lowercase()).collect();
+    let insensitive: Vec<String> =
+        WEBSOCKET_HEADERS.iter().map(|h| h.to_ascii_lowercase()).collect();
     for (k, v) in headers {
         let mut name = k.as_str();
 
@@ -141,9 +171,11 @@ pub fn generate_request(mut request: Request) -> Result<(Vec<u8>, String)> {
             req,
             "{}: {}\r",
             name,
-            v.to_str().map_err(|e| Error::Utf8(format!("{e} for header name '{name}' with value: {v:?}")))?
-        ).unwrap();
-
+            v.to_str().map_err(|e| Error::Utf8(format!(
+                "{e} for header name '{name}' with value: {v:?}"
+            )))?
+        )
+        .unwrap();
     }
 
     writeln!(req, "\r").unwrap();
@@ -161,7 +193,7 @@ fn extract_subprotocols(req: &Request) -> Result<Option<Vec<String>>> {
 #[derive(Debug)]
 struct VerifyData {
     accept_key: String,
-    subprotocols: Option<Vec<String>>
+    subprotocols: Option<Vec<String>>,
 }
 
 impl VerifyData {
@@ -190,24 +222,26 @@ impl VerifyData {
             return Err(Error::Protocol(ProtocolError::MissingUpgradeHeader));
         }
 
-        if !headers
-            .get("Sec-WebSocket-Accept")
-            .map(|h| h == &self.accept_key)
-            .unwrap_or(false)
-        {
+        if !headers.get("Sec-WebSocket-Accept").map(|h| h == &self.accept_key).unwrap_or(false) {
             return Err(Error::Protocol(ProtocolError::AcceptKeyMismatch));
         }
 
         if headers.get("Sec-WebSocket-Protocol").is_none() && self.subprotocols.is_some() {
-            return Err(Error::Protocol(ProtocolError::SecWebSocketSubProtocolError(SubProtocolError::NoSubProtocol)));
+            return Err(Error::Protocol(ProtocolError::SecWebSocketSubProtocolError(
+                SubProtocolError::NoSubProtocol,
+            )));
         }
         if headers.get("Sec-Websocket-Protocol").is_some() && self.subprotocols.is_none() {
-            return Err(Error::Protocol(ProtocolError::SecWebSocketSubProtocolError(SubProtocolError::ServerSentSubProtocolNoneRequested)));
+            return Err(Error::Protocol(ProtocolError::SecWebSocketSubProtocolError(
+                SubProtocolError::ServerSentSubProtocolNoneRequested,
+            )));
         }
         if let Some(returned_subprotocol) = headers.get("Sec-WebSocket-Protocol") {
             if let Some(accepted_subprotocols) = &self.subprotocols {
                 if !accepted_subprotocols.contains(&returned_subprotocol.to_str()?.to_string()) {
-                    return Err(Error::Protocol(ProtocolError::SecWebSocketSubProtocolError(SubProtocolError::InvalidSubProtocol)));
+                    return Err(Error::Protocol(ProtocolError::SecWebSocketSubProtocolError(
+                        SubProtocolError::InvalidSubProtocol,
+                    )));
                 }
             }
         }
@@ -223,7 +257,7 @@ impl TryParse for Response {
 
         Ok(match req.parse(data)? {
             Status::Partial => None,
-            Status::Complete(n) => Some((n, Response::from_httparse(req)?))
+            Status::Complete(n) => Some((n, Response::from_httparse(req)?)),
         })
     }
 }

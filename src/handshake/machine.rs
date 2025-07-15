@@ -4,30 +4,28 @@ use std::io::{Cursor, Read, Write};
 
 use bytes::Buf;
 
-use crate::{error::{Error, ProtocolError, Result}, util::NonBlockingResult, ReadBuffer};
+use crate::{
+    error::{Error, ProtocolError, Result},
+    util::NonBlockingResult,
+    ReadBuffer,
+};
 
-/// A generic handshake state machine 
+/// A generic handshake state machine
 #[derive(Debug)]
 pub struct HandshakeMachine<Stream> {
     stream: Stream,
-    state: HandshakeState
+    state: HandshakeState,
 }
 
 impl<Stream> HandshakeMachine<Stream> {
     /// Start reading data from the peer
     pub fn start_read(stream: Stream) -> Self {
-        Self {
-            stream,
-            state: HandshakeState::Reading(ReadBuffer::new(), AttackCheck::new())
-        }
+        Self { stream, state: HandshakeState::Reading(ReadBuffer::new(), AttackCheck::new()) }
     }
 
     /// Start writing data to the peer
     pub fn start_write<D: Into<Vec<u8>>>(stream: Stream, data: D) -> Self {
-        HandshakeMachine {
-            stream,
-            state: HandshakeState::Writing(Cursor::new(data.into()))
-        }
+        HandshakeMachine { stream, state: HandshakeState::Writing(Cursor::new(data.into())) }
     }
 
     /// Returns a shared reference to the internal stream
@@ -57,7 +55,7 @@ impl<Stream: Read + Write> HandshakeMachine<Stream> {
                             Ok(RoundResult::StageFinished(StageResult::DoneReading {
                                 result: obj,
                                 stream: self.stream,
-                                tail: buf.into_vec()
+                                tail: buf.into_vec(),
                             }))
                         } else {
                             Ok(RoundResult::Incomplete(HandshakeMachine {
@@ -65,13 +63,13 @@ impl<Stream: Read + Write> HandshakeMachine<Stream> {
                                 ..self
                             }))
                         }
-                    },
+                    }
                     None => Ok(RoundResult::WouldBlock(HandshakeMachine {
                         state: HandshakeState::Reading(buf, attack_check),
                         ..self
-                    }))
+                    })),
                 }
-            },
+            }
             HandshakeState::Writing(mut buf) => {
                 assert!(buf.has_remaining());
 
@@ -97,16 +95,14 @@ impl<Stream: Read + Write> HandshakeMachine<Stream> {
                         ..self
                     }))
                 }
-            },
-            HandshakeState::Flushing => {
-                match self.stream.flush().no_block()? {
-                    Some(()) => Ok(RoundResult::StageFinished(StageResult::DoneWriting(self.stream))),
-                    None => Ok(RoundResult::WouldBlock(HandshakeMachine {
-                        state: HandshakeState::Flushing,
-                        ..self
-                    }))
-                }
             }
+            HandshakeState::Flushing => match self.stream.flush().no_block()? {
+                Some(()) => Ok(RoundResult::StageFinished(StageResult::DoneWriting(self.stream))),
+                None => Ok(RoundResult::WouldBlock(HandshakeMachine {
+                    state: HandshakeState::Flushing,
+                    ..self
+                })),
+            },
         }
     }
 }
@@ -118,8 +114,8 @@ pub enum RoundResult<Object, Stream> {
     WouldBlock(HandshakeMachine<Stream>),
     /// Round done, stage unchanged
     Incomplete(HandshakeMachine<Stream>),
-    /// Stage complete 
-    StageFinished(StageResult<Object, Stream>)
+    /// Stage complete
+    StageFinished(StageResult<Object, Stream>),
 }
 
 /// The result of the stage
@@ -127,13 +123,9 @@ pub enum RoundResult<Object, Stream> {
 pub enum StageResult<Object, Stream> {
     /// Reading finished round
     #[allow(missing_docs)]
-    DoneReading {
-        result: Object,
-        stream: Stream,
-        tail: Vec<u8>
-    },
+    DoneReading { result: Object, stream: Stream, tail: Vec<u8> },
     /// Writing finished round
-    DoneWriting(Stream)
+    DoneWriting(Stream),
 }
 
 /// A parse-able object
@@ -150,7 +142,7 @@ enum HandshakeState {
     /// Sending data to peer
     Writing(Cursor<Vec<u8>>),
     /// Flushing data to ensure that all intermediaries reach their destinations
-    Flushing
+    Flushing,
 }
 
 /// Attack mitigation against DoS attacks
@@ -159,16 +151,13 @@ pub(crate) struct AttackCheck {
     /// Number of HTTP header successful reads (TCP packets)
     packets: usize,
     /// Total number of bytes in HTTP header
-    bytes: usize
+    bytes: usize,
 }
 
 impl AttackCheck {
     /// Initialize attack checking for incoming buffer
     fn new() -> Self {
-        Self {
-            packets: 0,
-            bytes: 0
-        }
+        Self { packets: 0, bytes: 0 }
     }
 
     /// Check the size of an incoming packet. To be called immediately after `read()`
@@ -184,9 +173,10 @@ impl AttackCheck {
 
         if self.bytes > MAX_BYTES
             || self.packets > MAX_PACKETS
-            || (self.packets > MIN_PACKET_CHECK_THRESHOLD && self.packets * MIN_PACKET_SIZE > self.bytes) 
+            || (self.packets > MIN_PACKET_CHECK_THRESHOLD
+                && self.packets * MIN_PACKET_SIZE > self.bytes)
         {
-            return Err(Error::AttackAttempt)
+            return Err(Error::AttackAttempt);
         }
 
         Ok(())

@@ -7,7 +7,6 @@ use thiserror::Error;
 
 use crate::protocol::frame::codec::Data;
 
-
 /// Generic result type
 pub type Result<T, E = Error> = std::result::Result<T, E>;
 
@@ -84,7 +83,7 @@ pub enum Error {
 
     /// Attack attempt detected.
     #[error("Detected attempted attack")]
-    AttackAttempt
+    AttackAttempt,
 }
 
 impl From<Utf8Error> for Error {
@@ -138,7 +137,7 @@ impl From<httparse::Error> for Error {
     fn from(value: httparse::Error) -> Self {
         match value {
             httparse::Error::TooManyHeaders => Error::Capacity(CapacityError::TooManyHeaders),
-            e => Error::Protocol(ProtocolError::HttparseError(e))
+            e => Error::Protocol(ProtocolError::HttparseError(e)),
         }
     }
 }
@@ -163,23 +162,23 @@ pub enum ProtocolError {
     /// Missing `Connection: upgrade` HTTP header.
     #[error("Missing 'Connection: upgrade' header")]
     MissingConnectionUpgradeHeader,
-    
+
     /// Missing `Upgrade: websocket` HTTP header.
     #[error("Missing 'Upgrade: websocket' header")]
     MissingUpgradeHeader,
-    
+
     /// Missing `Sec-WebSocket-Version: 13` HTTP header.
     #[error("Missing 'Sec-WebSocket-Version: 13' header")]
     MissingVersionHeader,
-    
+
     /// Missing `Sec-WebSocket-Key` HTTP header.
     #[error("Missing 'Sec-WebSocket-Key' header")]
     MissingKeyHeader,
-    
+
     /// The `Sec-WebSocket-Accept` header is either not present or does not specify the correct key value.
     #[error("Mismatched 'Sec-WebSocket-Accept' header")]
     AcceptKeyMismatch,
-    
+
     /// The `Sec-WebSocket-Protocol` header was invalid
     #[error("SubProtocol error: {0}")]
     SecWebSocketSubProtocolError(SubProtocolError),
@@ -250,7 +249,7 @@ pub enum ProtocolError {
     JunkAfterRequest,
 
     /// Custom responses must be unsuccessful.
-     #[error("Custom response must not be successful")]
+    #[error("Custom response must not be successful")]
     CustomResponseSuccessful,
 }
 
@@ -285,10 +284,9 @@ pub enum CapacityError {
         /// The size of the message.
         size: usize,
         /// The maximum allowed message size.
-        max: usize
-    }
+        max: usize,
+    },
 }
-
 
 /// Indicates the specific type/cause of URL error.
 #[derive(Debug, Error, PartialEq, Eq, Clone)]
@@ -315,7 +313,7 @@ pub enum UrlError {
 
     /// Failed to connect with this URL.
     #[error("Unable to connect to host: {0}")]
-    UnableToConnect(String)
+    UnableToConnect(String),
 }
 
 /// TLS errors.
@@ -339,5 +337,5 @@ pub enum TlsError {
     /// DNS name resolution error.
     #[cfg(feature = "rustls")]
     #[error("Invalid DNS name for TLS")]
-    InvalidDnsName
+    InvalidDnsName,
 }

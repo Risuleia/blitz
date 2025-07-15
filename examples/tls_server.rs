@@ -1,16 +1,20 @@
 use std::{net::TcpListener, sync::Arc, thread::spawn};
 
-use blitz::{accept_header, handshake::server::{Request, Response}, stream::SimplifiedStream};
+use blitz::{
+    accept_header,
+    handshake::server::{Request, Response},
+    stream::SimplifiedStream,
+};
 use native_tls_crate::TlsAcceptor;
 
 fn main() {
-    let identity = std::fs::read("path/to/some_identity.p12").expect("Failed to read some_identity.p12");
+    let identity =
+        std::fs::read("path/to/some_identity.p12").expect("Failed to read some_identity.p12");
     let identity = native_tls_crate::Identity::from_pkcs12(&identity, "your-password")
         .expect("Failed to parse PKCS#12 identity");
 
-    let tls_acceptor = Arc::new(TlsAcceptor::builder(identity)
-        .build()
-        .expect("Failed to build TLS acceptor"));
+    let tls_acceptor =
+        Arc::new(TlsAcceptor::builder(identity).build().expect("Failed to build TLS acceptor"));
 
     let server = TcpListener::bind("0.0.0.0:8443").expect("Failed to bind to port 8443");
 
@@ -18,7 +22,7 @@ fn main() {
         let stream = stream.expect("Failed to accept incoming stream");
 
         let acceptor = tls_acceptor.clone();
-        
+
         spawn(move || {
             let tls_stream = acceptor.accept(stream).expect("TLS handshake failed");
 

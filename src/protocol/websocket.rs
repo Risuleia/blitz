@@ -1,8 +1,23 @@
 //! WebSocket handler
 
-use std::{io::{self, Read, Write}, mem::replace};
+use std::{
+    io::{self, Read, Write},
+    mem::replace,
+};
 
-use crate::{error::{CapacityError, Error, ProtocolError, Result}, protocol::{config::WebSocketConfig, frame::{codec::{CloseCode, Control, Data, OpCode}, core::FrameCodec, CloseFrame, Frame, Utf8Bytes}, message::{IncompleteMessage, IncompleteMessageType, Message}}, MAX_CONTROL_FRAME_PAYLOAD};
+use crate::{
+    error::{CapacityError, Error, ProtocolError, Result},
+    protocol::{
+        config::WebSocketConfig,
+        frame::{
+            codec::{CloseCode, Control, Data, OpCode},
+            core::FrameCodec,
+            CloseFrame, Frame, Utf8Bytes,
+        },
+        message::{IncompleteMessage, IncompleteMessageType, Message},
+    },
+    MAX_CONTROL_FRAME_PAYLOAD,
+};
 
 /// WebSocket operation mode
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -10,7 +25,7 @@ pub enum OperationMode {
     /// Client mode
     Client,
     /// Server mode
-    Server
+    Server,
 }
 
 /// WebSocket input-output stream.
@@ -22,7 +37,7 @@ pub enum OperationMode {
 #[derive(Debug)]
 pub struct WebSocket<T> {
     stream: T,
-    context: WebSocketContext
+    context: WebSocketContext,
 }
 
 impl<T: Read + Write> WebSocket<T> {
@@ -35,10 +50,7 @@ impl<T: Read + Write> WebSocket<T> {
     /// # Panics
     /// Panics if config is invalid e.g. `max_write_buffer_size <= write_buffer_size`.
     pub fn new(stream: T, mode: OperationMode, config: Option<WebSocketConfig>) -> Self {
-        WebSocket {
-            stream,
-            context: WebSocketContext::new(mode, config)
-        }
+        WebSocket { stream, context: WebSocketContext::new(mode, config) }
     }
 
     /// Convert a raw socket into a WebSocket without performing a handshake.
@@ -49,11 +61,13 @@ impl<T: Read + Write> WebSocket<T> {
     ///
     /// # Panics
     /// Panics if config is invalid e.g. `max_write_buffer_size <= write_buffer_size`.
-    pub fn from_partially_read(stream: T, part: Vec<u8>, mode: OperationMode, config: Option<WebSocketConfig>) -> Self {
-        WebSocket {
-            stream,
-            context: WebSocketContext::from_partially_read(part, mode, config)
-        }
+    pub fn from_partially_read(
+        stream: T,
+        part: Vec<u8>,
+        mode: OperationMode,
+        config: Option<WebSocketConfig>,
+    ) -> Self {
+        WebSocket { stream, context: WebSocketContext::from_partially_read(part, mode, config) }
     }
 
     /// Returns a shared reference to the stream
@@ -78,7 +92,7 @@ impl<T: Read + Write> WebSocket<T> {
     pub fn set_config(&mut self, func: impl FnOnce(&mut WebSocketConfig)) {
         self.context.set_config(func);
     }
-    
+
     /// Read the configuration.
     pub fn get_config(&self) -> &WebSocketConfig {
         self.context.get_config()
@@ -203,7 +217,7 @@ pub struct WebSocketContext {
     /// that failed to flush previously and we should try again.
     unflushed_additional: bool,
     /// The configuration for the websocket session.
-    config: WebSocketConfig
+    config: WebSocketConfig,
 }
 
 impl WebSocketContext {
@@ -220,9 +234,17 @@ impl WebSocketContext {
     ///
     /// # Panics
     /// Panics if config is invalid e.g. `max_write_buffer_size <= write_buffer_size`.
-    pub fn from_partially_read(part: Vec<u8>, mode: OperationMode, config: Option<WebSocketConfig>) -> Self {
+    pub fn from_partially_read(
+        part: Vec<u8>,
+        mode: OperationMode,
+        config: Option<WebSocketConfig>,
+    ) -> Self {
         let configuration = config.unwrap_or_default();
-        Self::_new(mode, FrameCodec::from_partially_read(part, configuration.read_buffer_size), configuration)
+        Self::_new(
+            mode,
+            FrameCodec::from_partially_read(part, configuration.read_buffer_size),
+            configuration,
+        )
     }
 
     fn _new(mode: OperationMode, mut frame: FrameCodec, config: WebSocketConfig) -> Self {
@@ -238,7 +260,7 @@ impl WebSocketContext {
             incomplete: None,
             additional_send: None,
             unflushed_additional: false,
-            config
+            config,
         }
     }
 
@@ -284,9 +306,11 @@ impl WebSocketContext {
         loop {
             if self.additional_send.is_some() || self.unflushed_additional {
                 match self.flush(stream) {
-                    Ok(_) => {},
-                    Err(Error::Io(e)) if e.kind() == io::ErrorKind::WouldBlock => self.unflushed_additional = true,
-                    Err(e) => return Err(e)
+                    Ok(_) => {}
+                    Err(Error::Io(e)) if e.kind() == io::ErrorKind::WouldBlock => {
+                        self.unflushed_additional = true
+                    }
+                    Err(e) => return Err(e),
                 }
             } else if self.mode == OperationMode::Server && !self.state.can_read() {
                 self.state = WebSocketState::Terminated;
@@ -323,9 +347,9 @@ impl WebSocketContext {
             Message::Pong(data) => {
                 self.set_additional(Frame::new_pong(data));
                 return self._write(stream, None).map(|_| ());
-            },
+            }
             Message::Close(code) => return self.close(stream, code),
-            Message::Frame(f) => f
+            Message::Frame(f) => f,
         };
 
         let should_flush = self._write(stream, Some(frame))?;
@@ -357,7 +381,11 @@ impl WebSocketContext {
     /// This function guarantees that the close frame will be queued.
     /// There is no need to call it again. Calling this function is
     /// the same as calling `send(Message::Close(..))`.
-    pub fn close<T: Read + Write>(&mut self, stream: &mut T, code: Option<CloseFrame>) -> Result<()> {
+    pub fn close<T: Read + Write>(
+        &mut self,
+        stream: &mut T,
+        code: Option<CloseFrame>,
+    ) -> Result<()> {
         if let WebSocketState::Active = self.state {
             self.state = WebSocketState::ClosedByServer;
 
@@ -376,7 +404,7 @@ impl WebSocketContext {
                 stream,
                 self.config.max_frame_size,
                 matches!(self.mode, OperationMode::Server),
-                self.config.accept_unmasked_frames
+                self.config.accept_unmasked_frames,
             )
             .check_connection_reset(self.state)?
         {
@@ -394,22 +422,26 @@ impl WebSocketContext {
             }
 
             match frame.header().opcode {
-                OpCode::Control(ctrl) => {
-                    match ctrl {
-                        _ if !frame.header().fin => Err(Error::Protocol(ProtocolError::FragmentedControlFrame)),
-                        _ if frame.payload().len() > MAX_CONTROL_FRAME_PAYLOAD => Err(Error::Protocol(ProtocolError::ControlFrameTooBig)),
-                        Control::Close => Ok(self.try_close(frame.into_close()?).map(Message::Close)),
-                        Control::Reserved(code) => Err(Error::Protocol(ProtocolError::UnknownControlOpCode(code))),
-                        Control::Ping => {
-                            let data = frame.into_payload();
-                            if self.state.is_active() {
-                                self.set_additional(Frame::new_pong(data.clone()));
-                            }
-
-                            Ok(Some(Message::Ping(data)))
-                        },
-                        Control::Pong => Ok(Some(Message::Pong(frame.into_payload())))
+                OpCode::Control(ctrl) => match ctrl {
+                    _ if !frame.header().fin => {
+                        Err(Error::Protocol(ProtocolError::FragmentedControlFrame))
                     }
+                    _ if frame.payload().len() > MAX_CONTROL_FRAME_PAYLOAD => {
+                        Err(Error::Protocol(ProtocolError::ControlFrameTooBig))
+                    }
+                    Control::Close => Ok(self.try_close(frame.into_close()?).map(Message::Close)),
+                    Control::Reserved(code) => {
+                        Err(Error::Protocol(ProtocolError::UnknownControlOpCode(code)))
+                    }
+                    Control::Ping => {
+                        let data = frame.into_payload();
+                        if self.state.is_active() {
+                            self.set_additional(Frame::new_pong(data.clone()));
+                        }
+
+                        Ok(Some(Message::Ping(data)))
+                    }
+                    Control::Pong => Ok(Some(Message::Pong(frame.into_payload()))),
                 },
                 OpCode::Data(data) => {
                     let fin = frame.header().fin;
@@ -427,40 +459,45 @@ impl WebSocketContext {
                             } else {
                                 Ok(None)
                             }
-                        },
+                        }
                         data_frag if self.incomplete.is_some() => {
                             Err(Error::Protocol(ProtocolError::ExpectedFragment(data_frag)))
-                        },
+                        }
                         Data::Text if fin => {
                             check_max_size(frame.payload().len(), self.config.max_message_size)?;
                             Ok(Some(Message::Text(frame.into_text()?)))
-                        },
+                        }
                         Data::Binary if fin => {
                             check_max_size(frame.payload().len(), self.config.max_message_size)?;
                             Ok(Some(Message::Binary(frame.into_payload())))
-                        },
+                        }
                         Data::Text | Data::Binary => {
                             let msg_type = match data {
                                 Data::Text => IncompleteMessageType::Text,
                                 Data::Binary => IncompleteMessageType::Binary,
-                                _ => panic!("Bug: message is neither text not binary")
+                                _ => panic!("Bug: message is neither text not binary"),
                             };
 
                             let mut incomplete = IncompleteMessage::new(msg_type);
-                            incomplete.extend(frame.into_payload(), self.config.max_message_size)?;
-                            
+                            incomplete
+                                .extend(frame.into_payload(), self.config.max_message_size)?;
+
                             self.incomplete = Some(incomplete);
 
                             Ok(None)
-                        },
-                        Data::Reserved(code) => Err(Error::Protocol(ProtocolError::UnknownDataOpCode(code)))
+                        }
+                        Data::Reserved(code) => {
+                            Err(Error::Protocol(ProtocolError::UnknownDataOpCode(code)))
+                        }
                     }
                 }
             }
         } else {
             match replace(&mut self.state, WebSocketState::Terminated) {
-                WebSocketState::ClosedByPeer | WebSocketState::CloseAcknowledged => Err(Error::ConnectionClosed),
-                _ => Err(Error::Protocol(ProtocolError::ResetWithoutClosing))
+                WebSocketState::ClosedByPeer | WebSocketState::CloseAcknowledged => {
+                    Err(Error::ConnectionClosed)
+                }
+                _ => Err(Error::Protocol(ProtocolError::ResetWithoutClosing)),
             }
         }
     }
@@ -475,9 +512,9 @@ impl WebSocketContext {
                 Err(Error::WriteBufferFull) => {
                     self.set_additional(msg);
                     false
-                },
+                }
                 Err(e) => return Err(e),
-                Ok(_) => true
+                Ok(_) => true,
             }
         } else {
             self.unflushed_additional
@@ -504,7 +541,7 @@ impl WebSocketContext {
                     if !frame.code.allowed() {
                         CloseFrame {
                             code: CloseCode::Protocol,
-                            reason: Utf8Bytes::from_static("Protocol violatoin")
+                            reason: Utf8Bytes::from_static("Protocol violatoin"),
                         }
                     } else {
                         frame
@@ -515,23 +552,23 @@ impl WebSocketContext {
                 self.set_additional(reply);
 
                 Some(close)
-            },
+            }
             WebSocketState::ClosedByPeer | WebSocketState::CloseAcknowledged => None,
             WebSocketState::ClosedByServer => {
                 self.state = WebSocketState::CloseAcknowledged;
                 Some(close)
-            },
-            WebSocketState::Terminated => unreachable!()
+            }
+            WebSocketState::Terminated => unreachable!(),
         }
     }
 
     /// Write a single frame into the write-buffer.
     fn buffer_frame<T>(&mut self, stream: &mut T, mut frame: Frame) -> Result<()>
-    where 
-        T: Read + Write
+    where
+        T: Read + Write,
     {
         match self.mode {
-            OperationMode::Server => {},
+            OperationMode::Server => {}
             OperationMode::Client => frame.set_random_mask(),
         }
 
@@ -573,7 +610,7 @@ enum WebSocketState {
     /// The peer replied to our close handshake.
     CloseAcknowledged,
     /// The connection does not exist anymore.
-    Terminated
+    Terminated,
 }
 
 impl WebSocketState {
@@ -593,7 +630,7 @@ impl WebSocketState {
     fn check_if_terminated(self) -> Result<()> {
         match self {
             WebSocketState::Terminated => Err(Error::AlreadyClosed),
-            _ => Ok(())
+            _ => Ok(()),
         }
     }
 }
@@ -613,7 +650,7 @@ impl<T> CheckConnectionReset for Result<T> {
                     Error::Io(e)
                 }
             }),
-            other => other
+            other => other,
         }
     }
 }

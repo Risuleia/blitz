@@ -1,6 +1,12 @@
 //! WebSocket Frame module
 
-use std::{fmt::Display, io::{Cursor, ErrorKind, Read, Write}, mem, result::Result as StdResult, str::Utf8Error};
+use std::{
+    fmt::Display,
+    io::{Cursor, ErrorKind, Read, Write},
+    mem,
+    result::Result as StdResult,
+    str::Utf8Error,
+};
 
 use bytes::{Bytes, BytesMut};
 
@@ -8,7 +14,10 @@ use super::{
     codec::{CloseCode, Control, Data, OpCode},
     mask::{apply_mask, generate},
 };
-use crate::{error::{Error, ProtocolError, Result}, protocol::frame::Utf8Bytes};
+use crate::{
+    error::{Error, ProtocolError, Result},
+    protocol::frame::Utf8Bytes,
+};
 
 /// A struct representing the close command.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -16,8 +25,7 @@ pub struct CloseFrame {
     /// The reason as a code.
     pub code: CloseCode,
     /// The reason as text string.
-    pub reason: Utf8Bytes
-
+    pub reason: Utf8Bytes,
 }
 
 impl Display for CloseFrame {
@@ -52,7 +60,7 @@ impl Default for FrameHeader {
             rsv2: false,
             rsv3: false,
             opcode: OpCode::Control(Control::Close),
-            mask: None
+            mask: None,
         }
     }
 }
@@ -72,17 +80,15 @@ impl FrameHeader {
             i @ Ok(None) => {
                 cursor.set_position(init);
                 i
-            },
-            other => other
+            }
+            other => other,
         }
     }
 
     /// Get the size of the header formatted with given payload length.
     #[allow(clippy::len_without_is_empty)]
     pub fn len(&self, length: u64) -> usize {
-        2 +
-        Length::for_len(length).additional() +
-        (if self.mask.is_some() { 4 } else { 0 })
+        2 + Length::for_len(length).additional() + (if self.mask.is_some() { 4 } else { 0 })
     }
 
     /// Format a header for given payload size.
@@ -106,7 +112,7 @@ impl FrameHeader {
             Length::U8(_) => (),
             Length::U16 => {
                 output.write_all(&(length as u16).to_be_bytes())?;
-            },
+            }
             Length::U64 => {
                 output.write_all(&length.to_be_bytes())?;
             }
@@ -154,7 +160,10 @@ impl FrameHeader {
 
             if particular_len > 0 {
                 const SIZE: usize = mem::size_of::<u64>();
-                assert!(particular_len < SIZE, "Length exceeded max size of unsigned 64-bit integer");
+                assert!(
+                    particular_len < SIZE,
+                    "Length exceeded max size of unsigned 64-bit integer"
+                );
 
                 let start = SIZE - particular_len;
                 let mut buf = [0u8; SIZE];
@@ -162,7 +171,7 @@ impl FrameHeader {
                 match cursor.read_exact(&mut buf[start..]) {
                     Err(ref e) if e.kind() == ErrorKind::UnexpectedEof => return Ok(None),
                     Err(e) => return Err(e.into()),
-                    Ok(()) => u64::from_be_bytes(buf)
+                    Ok(()) => u64::from_be_bytes(buf),
                 }
             } else {
                 u64::from(len_byte)
@@ -183,35 +192,26 @@ impl FrameHeader {
         match opcode {
             OpCode::Control(Control::Reserved(_)) => {
                 return Err(Error::Protocol(ProtocolError::UnknownControlOpCode(a & 0x0F)));
-            },
+            }
             OpCode::Data(Data::Reserved(_)) => {
                 return Err(Error::Protocol(ProtocolError::UnknownDataOpCode(a & 0x0F)));
-            },
-            _ => ()
+            }
+            _ => (),
         };
 
-        let header = FrameHeader {
-            fin,
-            rsv1,
-            rsv2,
-            rsv3,
-            opcode,
-            mask
-        };
+        let header = FrameHeader { fin, rsv1, rsv2, rsv3, opcode, mask };
 
         Ok(Some((header, len)))
     }
 }
 
-impl Frame {
-    
-}
+impl Frame {}
 
 /// The WebSocket Frame
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Frame {
     header: FrameHeader,
-    payload: Bytes
+    payload: Bytes,
 }
 
 impl Frame {
@@ -300,10 +300,7 @@ impl Frame {
     pub fn new_data(data: impl Into<Bytes>, opcode: OpCode, fin: bool) -> Frame {
         debug_assert!(matches!(opcode, OpCode::Data(_)), "Invalid opcode for data frame");
 
-        Frame {
-            header: FrameHeader { fin, opcode, ..Default::default() },
-            payload: data.into()
-        }
+        Frame { header: FrameHeader { fin, opcode, ..Default::default() }, payload: data.into() }
     }
 
     /// Create a new Ping control frame.
@@ -311,7 +308,7 @@ impl Frame {
     pub fn new_ping(data: impl Into<Bytes>) -> Frame {
         Frame {
             header: FrameHeader { opcode: OpCode::Control(Control::Ping), ..<_>::default() },
-            payload: data.into()
+            payload: data.into(),
         }
     }
 
@@ -320,7 +317,7 @@ impl Frame {
     pub fn new_pong(data: impl Into<Bytes>) -> Frame {
         Frame {
             header: FrameHeader { opcode: OpCode::Control(Control::Pong), ..<_>::default() },
-            payload: data.into()
+            payload: data.into(),
         }
     }
 
@@ -336,10 +333,7 @@ impl Frame {
             <_>::default()
         };
 
-        Frame {
-            header: <_>::default(),
-            payload: payload.into()
-        }
+        Frame { header: <_>::default(), payload: payload.into() }
     }
 
     /// Initializes a new frame
@@ -410,7 +404,7 @@ impl Display for Frame {
 enum Length {
     U8(u8),
     U16,
-    U64
+    U64,
 }
 
 impl Length {
@@ -430,7 +424,7 @@ impl Length {
         match *self {
             Self::U8(_) => 0,
             Self::U16 => 2,
-            Self::U64 => 8
+            Self::U64 => 8,
         }
     }
 
@@ -439,7 +433,7 @@ impl Length {
         match *self {
             Self::U8(b) => b,
             Self::U16 => 126,
-            Self::U64 => 127
+            Self::U64 => 127,
         }
     }
 
@@ -448,7 +442,7 @@ impl Length {
         match byte & 0x7F {
             126 => Length::U16,
             127 => Length::U64,
-            b => Length::U8(b)
+            b => Length::U8(b),
         }
     }
 }

@@ -4,14 +4,14 @@
 //! It is filled by reading from a stream supporting `Read` and is then
 //! accessible as a cursor for reading bytes.
 
-use std::io::{Cursor, Read, Result as IoResult};
 use bytes::Buf;
+use std::io::{Cursor, Read, Result as IoResult};
 
 /// A FIFO buffer for reading packets from the network.
 #[derive(Debug)]
 pub struct ReadBuffer<const CHUNK_SIZE: usize> {
     storage: Cursor<Vec<u8>>,
-    chunk: Box<[u8; CHUNK_SIZE]>
+    chunk: Box<[u8; CHUNK_SIZE]>,
 }
 
 impl<const CHUNK_SIZE: usize> ReadBuffer<CHUNK_SIZE> {
@@ -24,7 +24,7 @@ impl<const CHUNK_SIZE: usize> ReadBuffer<CHUNK_SIZE> {
     pub fn with_capacity(capacity: usize) -> Self {
         Self {
             storage: Cursor::new(Vec::with_capacity(capacity)),
-            chunk: Box::new([0; CHUNK_SIZE])
+            chunk: Box::new([0; CHUNK_SIZE]),
         }
     }
 
@@ -73,7 +73,8 @@ impl<const CHUNK_SIZE: usize> Buf for ReadBuffer<CHUNK_SIZE> {
     }
 
     fn advance(&mut self, cnt: usize) {
-        let new_position = (self.storage.position() + cnt as u64).min(self.storage.get_ref().len() as u64);
+        let new_position =
+            (self.storage.position() + cnt as u64).min(self.storage.get_ref().len() as u64);
         self.storage.set_position(new_position);
     }
 }

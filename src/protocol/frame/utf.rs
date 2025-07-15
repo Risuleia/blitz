@@ -17,9 +17,7 @@ impl Utf8Bytes {
     /// Returns as a string slice.
     #[inline]
     pub fn as_str(&self) -> &str {
-        unsafe {
-            std::str::from_utf8_unchecked(&self.0)
-        }
+        unsafe { std::str::from_utf8_unchecked(&self.0) }
     }
 
     /// Creates from a [`Bytes`] object without checking the encoding.
@@ -100,7 +98,7 @@ impl Ord for Utf8Bytes {
 
 impl<T> PartialEq<T> for Utf8Bytes
 where
-    for<'a> &'a str: PartialEq<T>
+    for<'a> &'a str: PartialEq<T>,
 {
     /// ```
     /// let payload = tungstenite::Utf8Bytes::from_static("foo123");

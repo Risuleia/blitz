@@ -8,7 +8,7 @@ pub enum OpCode {
     /// Data (text or binary).
     Data(Data),
     /// Control (close, ping, pong).
-    Control(Control)
+    Control(Control),
 }
 
 /// Data opcodes as in RFC 6455
@@ -22,7 +22,7 @@ pub enum Data {
     /// A binary frame
     Binary = 0x2,
     /// 0xb-f are reserved for further control frames
-    Reserved(u8)
+    Reserved(u8),
 }
 
 /// Control opcodes as in RFC 6455
@@ -36,7 +36,7 @@ pub enum Control {
     /// A pong frame
     Pong = 0xA,
     /// 0xb-f are reserved for further control frames
-    Reserved(u8)
+    Reserved(u8),
 }
 
 impl Display for Data {
@@ -45,7 +45,7 @@ impl Display for Data {
             Self::Continuation => write!(f, "CONTINUE"),
             Self::Text => write!(f, "TEXT"),
             Self::Binary => write!(f, "BINARY"),
-            Self::Reserved(other) => write!(f, "RESERVED_DATA_{other}'") 
+            Self::Reserved(other) => write!(f, "RESERVED_DATA_{other}'"),
         }
     }
 }
@@ -56,7 +56,7 @@ impl Display for Control {
             Self::Close => write!(f, "CLOSE"),
             Self::Ping => write!(f, "PING"),
             Self::Pong => write!(f, "PONG"),
-            Self::Reserved(other) => write!(f, "RESERVED_CONTROL_{other}")
+            Self::Reserved(other) => write!(f, "RESERVED_CONTROL_{other}"),
         }
     }
 }
@@ -65,7 +65,7 @@ impl Display for OpCode {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match *self {
             Self::Data(d) => d.fmt(f),
-            Self::Control(c) => c.fmt(f)
+            Self::Control(c) => c.fmt(f),
         }
     }
 }
@@ -97,7 +97,7 @@ impl From<u8> for OpCode {
             0x9 => Self::Control(Control::Ping),
             0xA => Self::Control(Control::Pong),
             i @ 0xB..=0xF => Self::Control(Control::Reserved(i)),
-            _ => panic!("Bug: OpCode out of range")
+            _ => panic!("Bug: OpCode out of range"),
         }
     }
 }
@@ -110,7 +110,7 @@ pub enum CloseCode {
     /// Indicates a normal closure, meaning that the purpose for
     /// which the connection was established has been fulfilled.
     Normal = 0x3e8,
-    
+
     /// Indicates that an endpoint is "going away", such as a server
     /// going down or a browser having navigated away from a page.
     Away = 0x3e9,
@@ -191,13 +191,16 @@ pub enum CloseCode {
     Library(u16),
 
     #[doc(hidden)]
-    Bad(u16)
+    Bad(u16),
 }
 
 impl CloseCode {
     /// Check if this CloseCode is allowed.
     pub fn allowed(self) -> bool {
-        !matches!(self, Self::Bad(_) | Self::Reserved(_) | Self::Status | Self::Abnormal | Self::Tls)
+        !matches!(
+            self,
+            Self::Bad(_) | Self::Reserved(_) | Self::Status | Self::Abnormal | Self::Tls
+        )
     }
 }
 
@@ -264,5 +267,3 @@ impl From<u16> for CloseCode {
         }
     }
 }
-
-

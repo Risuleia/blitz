@@ -4,7 +4,13 @@ use std::io::{self, Cursor, Read, Write};
 
 use bytes::{Buf, BytesMut};
 
-use crate::{error::{CapacityError, Error, ProtocolError, Result}, protocol::frame::{frame::{Frame, FrameHeader}, mask::apply_mask}};
+use crate::{
+    error::{CapacityError, Error, ProtocolError, Result},
+    protocol::frame::{
+        frame::{Frame, FrameHeader},
+        mask::apply_mask,
+    },
+};
 
 const READ_BUFFER_LENGTH: usize = 128 * 1024;
 
@@ -14,7 +20,7 @@ pub struct FrameSocket<T> {
     /// The underlying network stream.
     stream: T,
     /// Codec for reading/writing frames.
-    codec: FrameCodec
+    codec: FrameCodec,
 }
 
 impl<T: Read + Write> FrameSocket<T> {
@@ -90,7 +96,7 @@ pub(crate) struct FrameCodec {
     /// the stream.
     out_buffer_write_len: usize,
     /// Header and remaining size of the incoming packet being processed.
-    header: Option<(FrameHeader, u64)>
+    header: Option<(FrameHeader, u64)>,
 }
 
 impl FrameCodec {
@@ -102,7 +108,7 @@ impl FrameCodec {
             out_buffer: <_>::default(),
             max_out_buffer_len: usize::MAX,
             out_buffer_write_len: 0,
-            header: None
+            header: None,
         }
     }
 
@@ -117,7 +123,7 @@ impl FrameCodec {
             out_buffer: <_>::default(),
             max_out_buffer_len: usize::MAX,
             out_buffer_write_len: 0,
-            header: None
+            header: None,
         }
     }
 
@@ -138,7 +144,7 @@ impl FrameCodec {
         stream: &mut S,
         max: Option<usize>,
         unmask: bool,
-        accept_unmasked: bool
+        accept_unmasked: bool,
     ) -> Result<Option<Frame>> {
         let max = max.unwrap_or(usize::MAX);
 
@@ -153,7 +159,10 @@ impl FrameCodec {
                     let len = *len as usize;
 
                     if len > max {
-                        return Err(Error::Capacity(CapacityError::MessageTooLarge { size: len, max }));
+                        return Err(Error::Capacity(CapacityError::MessageTooLarge {
+                            size: len,
+                            max,
+                        }));
                     }
 
                     self.in_buffer.reserve(len);
@@ -181,7 +190,7 @@ impl FrameCodec {
             if let Some(mask) = header.mask.take() {
                 apply_mask(&mut payload, mask);
             } else if !accept_unmasked {
-                return Err(Error::Protocol(ProtocolError::UnmaskedFrameFromClient))
+                return Err(Error::Protocol(ProtocolError::UnmaskedFrameFromClient));
             }
         }
 
@@ -209,8 +218,7 @@ impl FrameCodec {
     /// To ensure buffered frames are written call [`Self::write_out_buffer`].
     ///
     /// May write to the stream, will **not** flush.
-    pub(crate) fn write<S: Write>(&mut self, stream: &mut S, frame: Frame) -> Result<()>
-    {
+    pub(crate) fn write<S: Write>(&mut self, stream: &mut S, frame: Frame) -> Result<()> {
         if frame.len() + self.out_buffer.len() > self.max_out_buffer_len {
             return Err(Error::WriteBufferFull);
         }
@@ -235,8 +243,9 @@ impl FrameCodec {
             if len == 0 {
                 return Err(io::Error::new(
                     io::ErrorKind::ConnectionReset,
-                    "Connection reset while sending"
-                ).into());
+                    "Connection reset while sending",
+                )
+                .into());
             }
 
             self.out_buffer.drain(0..len);

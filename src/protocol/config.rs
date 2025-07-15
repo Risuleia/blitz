@@ -61,7 +61,7 @@ pub struct WebSocketConfig {
     /// By default this option is set to `false`, i.e. according to RFC 6455.
     pub accept_unmasked_frames: bool,
     /// Configuration for compression module
-    pub compression: WebSocketCompressionConfig
+    pub compression: WebSocketCompressionConfig,
 }
 
 impl Default for WebSocketConfig {
@@ -73,7 +73,7 @@ impl Default for WebSocketConfig {
             max_message_size: Some(64 << 20),
             max_frame_size: Some(64 << 20),
             accept_unmasked_frames: false,
-            compression: WebSocketCompressionConfig::default()
+            compression: WebSocketCompressionConfig::default(),
         }
     }
 }
@@ -94,7 +94,7 @@ impl WebSocketConfig {
     }
 
     /// Set [`Self::max_write_buffer_size`].
-    pub fn  max_write_buffer_size(mut self, size: usize) -> Self {
+    pub fn max_write_buffer_size(mut self, size: usize) -> Self {
         assert!(size > 0);
         self.max_write_buffer_size = size;
         self

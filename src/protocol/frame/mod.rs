@@ -9,6 +9,6 @@ mod mask;
 mod utf;
 
 pub use self::{
-    frame::{Frame, FrameHeader, CloseFrame},
-    utf::Utf8Bytes
+    frame::{CloseFrame, Frame, FrameHeader},
+    utf::Utf8Bytes,
 };
