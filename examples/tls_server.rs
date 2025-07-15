@@ -1,6 +1,6 @@
 use std::{net::TcpListener, sync::Arc, thread::spawn};
 
-use blitz::{
+use blitz_ws::{
     accept_header,
     handshake::server::{Request, Response},
     stream::SimplifiedStream,

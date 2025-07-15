@@ -1,4 +1,4 @@
-use blitz::{connect, protocol::message::Message};
+use blitz_ws::{connect, protocol::message::Message};
 
 fn main() {
     let (mut socket, response) = connect("ws://localhost:8080/socket").expect("Couldn't connect");
